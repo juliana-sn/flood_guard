@@ -55,11 +55,23 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary, // Cor de fundo do botão
+                  foregroundColor: Colors.white, // Cor do texto e do ícone
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 32, vertical: 16), // Espaçamento interno
+                  elevation: 5, // Altura da sombra
+                  textStyle: AppTextStyles.labelSm,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(15), // Bordas arredondadas
+                  ),
+                ),
                 child: const Text('Entrar'),
               ),
               const SizedBox(height: 24),
               Center(
-                child: Text(
+                child: const Text(
                   'Entrar com',
                   style: AppTextStyles.labelSm,
                 ),
