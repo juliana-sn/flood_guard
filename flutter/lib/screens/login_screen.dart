@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lumen_orbit/main.dart';
 import '../theme.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -54,7 +55,10 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushReplacement(context, 
+                  MaterialPageRoute(builder: (context) => const AppShell()));
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondary, // Cor de fundo do botão
                   foregroundColor: Colors.white, // Cor do texto e do ícone

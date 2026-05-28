@@ -18,7 +18,7 @@ class LumenOrbitApp extends StatelessWidget {
     return MaterialApp(
       title: 'Lumen Orbit',
       theme: AppTheme.lightTheme,
-      home: const AppShell(),
+      home: const LoginScreen(),
     );
   }
 }
@@ -35,7 +35,7 @@ class _AppShellState extends State<AppShell> {
   final screens = const [
     RiskMapScreen(),
     AlertCenterScreen(),
-    LoginScreen(),
+    
   ];
 
   void onItemTapped(int index) {
