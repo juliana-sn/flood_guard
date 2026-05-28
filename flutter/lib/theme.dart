@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const primary = Color(0xFFFF7E7B);
+  static const primary = Color(0xFF650912);
   static const secondary = Color(0xFFFFAD59);
   static const surface = Color(0xFFFFFFFF);
   static const onSurface = Color(0xFF313A51);
@@ -12,7 +12,7 @@ class AppColors {
 class AppTextStyles {
   static const headlineLg = TextStyle(
     fontSize: 32,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w800,
     color: AppColors.onSurface,
     fontFamily: 'Plus Jakarta Sans',
   );
@@ -23,8 +23,8 @@ class AppTextStyles {
     fontFamily: 'Plus Jakarta Sans',
   );
   static const bodyMd = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
+    fontSize: 15,
+    fontWeight: FontWeight(300),
     color: AppColors.onSurface,
     fontFamily: 'Plus Jakarta Sans',
   );

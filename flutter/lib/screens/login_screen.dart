@@ -15,22 +15,24 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
-              Center(
+              const SizedBox(height: 64),
+              const Center(
                 child: Text(
                   'OrbitFlood',
                   style: AppTextStyles.headlineLg,
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
+              const SizedBox(height: 40),
+              const Text(
                 'Acesse sua conta',
                 style: AppTextStyles.headlineMd,
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text(
-                'Monitore alertas de inundação em tempo real e mantenha-se seguro.',
+              const Text(
+                'Monitore alertas de inundação em tempo real.',
                 style: AppTextStyles.bodyMd,
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               const _AuthTextField(
@@ -38,49 +40,121 @@ class LoginScreen extends StatelessWidget {
                 icon: Icons.email_outlined,
                 hint: 'seu@email.com',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               const _AuthTextField(
                 label: 'Senha',
                 icon: Icons.lock_outline,
                 hint: '••••••••',
                 obscureText: true,
               ),
-              const SizedBox(height: 16),
+              
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {},
-                  child: const Text('Esqueci minha senha'),
+                  child: const Text(
+                    'Esqueci minha senha?',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight(400),
+                      wordSpacing: -1.5,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pushReplacement(context, 
-                  MaterialPageRoute(builder: (context) => const AppShell()));
+                  Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AppShell()));
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondary, // Cor de fundo do botão
                   foregroundColor: Colors.white, // Cor do texto e do ícone
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 32, vertical: 16), // Espaçamento interno
+                      horizontal: 32, vertical: 20), // Espaçamento interno
                   elevation: 5, // Altura da sombra
                   textStyle: AppTextStyles.labelSm,
                   shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(15), // Bordas arredondadas
+                        BorderRadius.circular(30), // Bordas arredondadas
                   ),
                 ),
-                child: const Text('Entrar'),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: const Text(
-                  'Entrar com',
-                  style: AppTextStyles.labelSm,
+                child: const Text('Entrar',
+                style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight(800),
+                      fontFamily: 'Plus Jakarta Sans',
+                ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+              const Text.rich(
+                TextSpan(
+                  children: [
+                    // Parte 1: Texto normal
+                    TextSpan(
+                      text: 'Não tem uma conta? ',
+                      style: TextStyle(
+                        color: Color(0xFF2D1600), // Cor do texto comum
+                        fontSize: 13,
+                        fontWeight: FontWeight(400),
+                      ),
+                    ),
+                    // Parte 2: O Link com destaque e clique
+                    TextSpan(
+                      text: 'Criar conta',
+                      style: TextStyle(
+                        color:
+                            AppColors.secondary, // Sua cor de destaque do tema
+                        fontSize: 13,
+                        fontWeight: FontWeight(800), // Destaque em negrito
+                      ),
+                      // Aqui configuramos a ação de clique do link
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              const Row(
+                children: const [
+                  Expanded(
+                    child: Divider(
+                      color: AppColors
+                          .onSurface, // Ajuste a cor se preferir mais clara
+                      thickness: 1, // Espessura da linha
+                      endIndent:
+                          15, // Espaço entre a linha da esquerda e o texto
+                    ),
+                  ),
+                  const Center(
+                    child: const Text(
+                      'OU ENTRE COM',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight(300),
+                          color: AppColors.onSurface,
+                          fontFamily: 'Plus Jakarta Sans',
+                          wordSpacing: -0.5),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: AppColors
+                          .onSurface, // Ajuste a cor se preferir mais clara
+                      thickness: 1, // Espessura da linha
+                      indent: 15,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -89,6 +163,9 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () {},
                       icon: const Icon(Icons.g_mobiledata),
                       label: const Text('Google'),
+                      style: ElevatedButton.styleFrom( // Cor de fundo
+                        foregroundColor: AppColors.primary, // Cor do texto e ícone
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -97,16 +174,15 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () {},
                       icon: const Icon(Icons.apple),
                       label: const Text('Apple'),
+                      style: ElevatedButton.styleFrom( // Cor de fundo
+                        foregroundColor: AppColors.primary, // Cor do texto e ícone
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              TextButton(
-                onPressed: () {},
-                child: const Text('Criar nova conta'),
-              ),
-              const SizedBox(height: 24),
+
             ],
           ),
         ),
