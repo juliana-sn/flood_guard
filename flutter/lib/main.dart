@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
 import 'screens/login_screen.dart';
-import 'screens/signup_screen.dart';
 import 'screens/risk_map_screen.dart';
 import 'screens/alert_center_screen.dart';
+import 'screens/profile_screen.dart';
 import 'widgets/bottom_nav.dart';
 
 void main() {
@@ -35,7 +35,7 @@ class _AppShellState extends State<AppShell> {
   final screens = const [
     RiskMapScreen(),
     AlertCenterScreen(),
-    
+    ProfileScreen(),
   ];
 
   void onItemTapped(int index) {

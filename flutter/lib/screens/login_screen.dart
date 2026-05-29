@@ -1,9 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:lumen_orbit/main.dart';
+import 'package:lumen_orbit/widgets/build_form_field.dart';
+import 'package:lumen_orbit/widgets/build_password_field.dart';
 import '../theme.dart';
+import 'signup_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+  class _LoginScreenState extends State<LoginScreen> {
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+  bool _isLoading = false;
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _isPasswordVisible = !_isPasswordVisible;
+    });
+  }
+
+  void _toggleConfirmPasswordVisibility() {
+    setState(() {
+      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -15,14 +40,14 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 64),
+              const SizedBox(height: 48),
               const Center(
                 child: Text(
                   'OrbitFlood',
                   style: AppTextStyles.headlineLg,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
               const Text(
                 'Acesse sua conta',
                 style: AppTextStyles.headlineMd,
@@ -35,19 +60,21 @@ class LoginScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              const _AuthTextField(
-                label: 'E-mail',
-                icon: Icons.email_outlined,
+              const BuildFormField(
+                label: 'Email',
+                icon: Icons.mail_outline,
                 hint: 'seu@email.com',
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 24),
-              const _AuthTextField(
+              
+              BuildPasswordField(
                 label: 'Senha',
                 icon: Icons.lock_outline,
                 hint: '••••••••',
-                obscureText: true,
+                isVisible: _isPasswordVisible,
+                onToggleVisibility: _togglePasswordVisibility,
               ),
-              
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -84,41 +111,52 @@ class LoginScreen extends StatelessWidget {
                         BorderRadius.circular(30), // Bordas arredondadas
                   ),
                 ),
-                child: const Text('Entrar',
-                style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight(800),
-                      fontFamily: 'Plus Jakarta Sans',
-                ),
+                child: const Text(
+                  'Entrar',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight(800),
+                    fontFamily: 'Plus Jakarta Sans',
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              const Text.rich(
-                TextSpan(
-                  children: [
-                    // Parte 1: Texto normal
-                    TextSpan(
-                      text: 'Não tem uma conta? ',
-                      style: TextStyle(
-                        color: Color(0xFF2D1600), // Cor do texto comum
-                        fontSize: 13,
-                        fontWeight: FontWeight(400),
+              Center(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      // Parte 1: Texto normal
+                      const TextSpan(
+                        text: 'Não tem uma conta? ',
+                        style: const TextStyle(
+                          color: Color(0xFF2D1600), // Cor do texto comum
+                          fontSize: 13,
+                          fontWeight: FontWeight(400),
+                        ),
                       ),
-                    ),
-                    // Parte 2: O Link com destaque e clique
-                    TextSpan(
-                      text: 'Criar conta',
-                      style: TextStyle(
-                        color:
-                            AppColors.secondary, // Sua cor de destaque do tema
-                        fontSize: 13,
-                        fontWeight: FontWeight(800), // Destaque em negrito
+                      // Parte 2: O Link com destaque e clique
+                      TextSpan(
+                        text: 'Criar conta',
+                        style: const TextStyle(
+                          color: AppColors
+                              .secondary, // Sua cor de destaque do tema
+                          fontSize: 13,
+                          fontWeight: FontWeight(800), // Destaque em negrito
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SignupScreen(),
+                              ),
+                            );
+                          },
                       ),
-                      // Aqui configuramos a ação de clique do link
-                    ),
-                  ],
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               const Row(
@@ -154,7 +192,6 @@ class LoginScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 32),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -163,8 +200,10 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () {},
                       icon: const Icon(Icons.g_mobiledata),
                       label: const Text('Google'),
-                      style: ElevatedButton.styleFrom( // Cor de fundo
-                        foregroundColor: AppColors.primary, // Cor do texto e ícone
+                      style: ElevatedButton.styleFrom(
+                        // Cor de fundo
+                        foregroundColor:
+                            AppColors.primary, // Cor do texto e ícone
                       ),
                     ),
                   ),
@@ -174,15 +213,16 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () {},
                       icon: const Icon(Icons.apple),
                       label: const Text('Apple'),
-                      style: ElevatedButton.styleFrom( // Cor de fundo
-                        foregroundColor: AppColors.primary, // Cor do texto e ícone
+                      style: ElevatedButton.styleFrom(
+                        // Cor de fundo
+                        foregroundColor:
+                            AppColors.primary, // Cor do texto e ícone
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-
             ],
           ),
         ),
@@ -191,28 +231,5 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
-class _AuthTextField extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final String hint;
-  final bool obscureText;
 
-  const _AuthTextField({
-    required this.label,
-    required this.icon,
-    required this.hint,
-    this.obscureText = false,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon),
-      ),
-    );
-  }
-}
