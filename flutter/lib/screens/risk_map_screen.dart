@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lumen_orbit/controllers/maps_controller.dart';
 import 'package:provider/provider.dart';
 import '../theme.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class RiskMapScreen extends StatelessWidget {
   const RiskMapScreen({super.key});
@@ -19,9 +20,8 @@ class RiskMapScreen extends StatelessWidget {
               ? 'Latitude ${local.lat} | Longitude ${local.long}'
               : local.erro;
 
-          return Center(
-            child: Text(mensagem),
-          );
+          return GoogleMap(initialCameraPosition: CameraPosition(target: LatLng(local.lat, local.long),
+          zoom: 5));
         }),
       ),
     );

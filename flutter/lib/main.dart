@@ -5,9 +5,14 @@ import 'screens/risk_map_screen.dart';
 import 'screens/alert_center_screen.dart';
 import 'screens/profile_screen.dart';
 import 'widgets/bottom_nav.dart';
+import 'package:flutter_config/flutter_config.dart';
 
-void main() {
+void main() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await FlutterConfig.loadEnvVariables();
+
   runApp(const LumenOrbitApp());
+  
 }
 
 class LumenOrbitApp extends StatelessWidget {
