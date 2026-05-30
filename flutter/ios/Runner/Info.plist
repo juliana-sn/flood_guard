@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>O Lumen Orbit usa sua localização para exibir áreas de risco próximas à sua posição.</string>
 </dict>
 </plist>
