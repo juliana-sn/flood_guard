@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 class BuildPasswordField extends StatelessWidget {
-  // 1. Transforme os parâmetros da sua função em propriedades da classe
   final String label;
   final IconData icon;
   final String hint;
   final bool isVisible;
   final VoidCallback onToggleVisibility;
 
-  // 2. Crie o construtor da classe
   const BuildPasswordField({
     super.key,
     required this.label,
@@ -19,7 +17,6 @@ class BuildPasswordField extends StatelessWidget {
     required this.onToggleVisibility,
   });
 
-  // 3. Implemente o método build obrigatório
   @override
   Widget build(BuildContext context) {
     return Column(

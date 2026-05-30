@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 class BuildFormField extends StatelessWidget {
-  // 1. Definição correta das variáveis (com TextInputType? corrigido)
   final String label;
   final IconData icon;
   final String hint;
   final TextInputType? keyboardType;
 
-  // 2. Criação do construtor obrigatório para inicializar as variáveis
   const BuildFormField({
     super.key,
     required this.label,
@@ -17,7 +15,7 @@ class BuildFormField extends StatelessWidget {
     this.keyboardType, // Opcional, pois pode ser nulo
   });
 
-  // 3. Implementação do método build
+
   @override
   Widget build(BuildContext context) {
     return Column(
