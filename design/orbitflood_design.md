@@ -1,8 +1,8 @@
-# OrbitFlood — Documento de Design
+# Flood Guard — Documento de Design
 
 ## Visão Geral
 
-O OrbitFlood é um aplicativo de monitoramento hidrológico em tempo real que utiliza inteligência orbital para prever e alertar sobre riscos de inundação. O design foca em clareza, urgência controlada e confiabilidade tecnológica.
+O Flood Guard é um aplicativo de monitoramento hidrológico em tempo real que utiliza inteligência orbital para prever e alertar sobre riscos de inundação. O design foca em clareza, urgência controlada e confiabilidade tecnológica.
 
 ## Paleta de Cores
 
@@ -45,7 +45,7 @@ Escalas principais:
 
 ### 1. Login
 
-- Logotipo "OrbitFlood" centralizado.
+- Logotipo "Flood Guard" centralizado.
 - Título principal: "Acesse sua conta".
 - Campos de email e senha com ícones.
 - Botão "Entrar" em coral vibrante.

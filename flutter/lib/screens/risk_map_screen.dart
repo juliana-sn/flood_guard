@@ -1,15 +1,14 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import '../models/alert_result.dart';
+import '../models/weather_forecast.dart';
+import '../services/flood_alert_coordinator.dart';
 import '../theme.dart';
+
+// Timeout global para cada etapa — evita loading infinito
+const _kLocationTimeout = Duration(seconds: 45);
 
 class RiskMapScreen extends StatefulWidget {
   const RiskMapScreen({super.key});
@@ -19,189 +18,132 @@ class RiskMapScreen extends StatefulWidget {
 }
 
 class _RiskMapScreenState extends State<RiskMapScreen> {
-  final MapController _mapController = MapController();
-  bool _loading = true;
-  String? _error;
-  List<Polygon> _floodPolygons = [];
-  LatLng _mapCenter = LatLng(-23.5505, -46.6333);
-  LatLng? _currentLocation;
-  String _locationStatus = 'Aguardando permissão de localização...';
-  String _riskTitle = 'Carregando status de risco...';
-  String _riskDescription = 'Posição atual sendo avaliada.';
-  Color _riskColor = AppColors.primary;
+  final _mapController  = MapController();
+  final _coordinator    = FloodAlertCoordinator();
 
-  String get _backendBaseUrl {
-    if (kIsWeb) return 'http://localhost:8000';
-    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
-    return 'http://localhost:8000';
-  }
+  bool _locationLoading = true;
+  bool _dataLoading     = false;
+
+  String? _locationError;
+  String? _dataError;
+
+  LatLng _mapCenter          = const LatLng(-23.5505, -46.6333);
+  LatLng? _currentLocation;
+
+  String _locationStatus     = 'Determinando localização...';
+  AlertResult? _alertResult;
+  WeatherForecast? _forecast;
+  String _cityName           = '';
 
   @override
   void initState() {
     super.initState();
-    _initLocation();
-    _loadFloodGeoJson();
+    _loadInPhases();
   }
 
-  Future<void> _initLocation() async {
+  Future<void> _loadInPhases() async {
+    setState(() {
+      _locationLoading = true;
+      _locationError   = null;
+      _dataError       = null;
+      _alertResult     = null;
+    });
+
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (!mounted) return;
-        setState(() {
-          _locationStatus = 'Serviço de localização desativado';
-        });
-        return;
-      }
+      final result = await _coordinator.run().timeout(_kLocationTimeout);
+      final position = LatLng(result.location.lat, result.location.lng);
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        if (!mounted) return;
-        setState(() {
-          _locationStatus = 'Permissão de localização negada';
-          _riskTitle = 'Permissão de localização necessária';
-          _riskDescription = 'Ative a permissão para ver alertas baseados na sua posição.';
-          _riskColor = Colors.orange;
-        });
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       if (!mounted) return;
       setState(() {
-        _currentLocation = LatLng(position.latitude, position.longitude);
-        _locationStatus = 'Localização encontrada';
-        if (_currentLocation != null) {
-          _mapCenter = _currentLocation!;
-        }
+        _currentLocation = position;
+        _mapCenter       = position;
+        _cityName        = result.location.cityName;
+        _locationStatus  = result.location.cityName.isNotEmpty
+            ? '${result.location.cityName} — ${result.location.uf}'
+            : 'Localização encontrada';
+        _locationLoading = false;
+        _dataLoading     = true;
+
+        _alertResult = result.alert;
+        _forecast    = result.forecast;
       });
-      _mapController.move(_mapCenter, 13);
-      await _fetchNearbyRisk();
-    } catch (error) {
+
+      try { _mapController.move(_mapCenter, 13); } catch (_) {}
+
+      if (result.alert.shouldAlert && mounted) {
+        _showAlertBanner(result.alert);
+      }
+
+      setState(() => _dataLoading = false);
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _locationStatus = 'Erro ao obter localização';
-        _error = error.toString();
-        _riskTitle = 'Falha ao acessar localização';
-        _riskDescription = 'Não foi possível determinar sua posição atual.';
-        _riskColor = Colors.orange;
+        _locationError   = _friendlyError(e);
+        _locationStatus  = 'Usando localização padrão (São Paulo)';
+        _locationLoading = false;
+        _dataLoading     = false;
       });
     }
   }
+  // dentro do _RiskMapScreenState
 
-  Future<void> _fetchNearbyRisk() async {
-    if (_currentLocation == null) return;
-    try {
-      final response = await http
-          .get(Uri.parse('$_backendBaseUrl/api/alerts/nearby?lat=${_currentLocation!.latitude}&lon=${_currentLocation!.longitude}'))
-          .timeout(const Duration(seconds: 15));
+Set<CircleMarker> _buildRiskCircles() {
+  if (_currentLocation == null || _alertResult == null) return {};
 
-      if (response.statusCode != 200) {
-        throw Exception('Falha ao buscar alerta: ${response.statusCode}');
-      }
+  final color = _alertResult!.color.withOpacity(0.3);
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (!mounted) return;
-      setState(() {
-        _riskTitle = data['severity'] as String? ?? 'Desconhecido';
-        _riskDescription = data['description'] as String? ?? 'Nenhuma informação disponível.';
-        _riskColor = Color(int.parse((data['color'] as String? ?? '#FF7E7B').replaceFirst('#', '0xFF'), radix: 16));
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _riskTitle = 'Erro ao obter alerta';
-        _riskDescription = error.toString();
-        _riskColor = Colors.orange;
-      });
-    }
-  }
+  return {
+    CircleMarker(
+      point: _currentLocation!,
+      radius: 5000, // 5 km
+      useRadiusInMeter: true,
+      color: color,
+      borderStrokeWidth: 2,
+      borderColor: _alertResult!.color.withOpacity(0.8),
+    ),
+    CircleMarker(
+      point: _currentLocation!,
+      radius: 10000, // 10 km
+      useRadiusInMeter: true,
+      color: color.withOpacity(0.2),
+      borderStrokeWidth: 2,
+      borderColor: _alertResult!.color.withOpacity(0.6),
+    ),
+  };
+}
 
-  Future<void> _loadFloodGeoJson() async {
-    try {
-      final response = await http
-          .get(Uri.parse('$_backendBaseUrl/api/geojson/flood-zones'))
-          .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode != 200) {
-        throw Exception('Falha ao carregar dados: ${response.statusCode}');
-      }
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final features = data['features'] as List<dynamic>?;
-      if (features == null || features.isEmpty) {
-        throw Exception('GeoJSON sem features');
-      }
-
-      final polygons = <Polygon>[];
-      for (final rawFeature in features) {
-        final feature = rawFeature as Map<String, dynamic>;
-        final geometry = feature['geometry'] as Map<String, dynamic>?;
-        if (geometry == null) continue;
-
-        final type = geometry['type'] as String?;
-        final coordinates = geometry['coordinates'];
-        if (type == 'Polygon') {
-          polygons.addAll(_buildPolygonsFromCoordinates(coordinates as List<dynamic>));
-        } else if (type == 'MultiPolygon') {
-          final multipolygons = coordinates as List<dynamic>;
-          for (final polygonCoordinates in multipolygons) {
-            polygons.addAll(_buildPolygonsFromCoordinates(polygonCoordinates as List<dynamic>));
-          }
-        }
-      }
-
-      if (polygons.isEmpty) {
-        throw Exception('Nenhum polígono válido encontrado');
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _floodPolygons = polygons;
-        if (_currentLocation != null) {
-          _mapCenter = _currentLocation!;
-        } else {
-          _mapCenter = polygons.first.points.first;
-        }
-        _loading = false;
-      });
-    } on TimeoutException catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Tempo de conexão excedido. Verifique se o backend está rodando e use o IP correto.';
-        _loading = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error.toString();
-        _loading = false;
-      });
-    }
-  }
-
-  List<Polygon> _buildPolygonsFromCoordinates(List<dynamic> coordinates) {
-    if (coordinates.isEmpty) return [];
-
-    final outerRing = coordinates.first as List<dynamic>;
-    final points = outerRing.map<LatLng>((coord) {
-      final pair = coord as List<dynamic>;
-      final lon = pair[0] as double;
-      final lat = pair[1] as double;
-      return LatLng(lat, lon);
-    }).toList();
-
-    return [
-      Polygon(
-        points: points,
-        color: Colors.red.withOpacity(0.25),
-        borderColor: Colors.red,
-        borderStrokeWidth: 2,
+  void _showAlertBanner(AlertResult alert) {
+    ScaffoldMessenger.of(context).showMaterialBanner(
+      MaterialBanner(
+        backgroundColor: alert.color,
+        content: Text(
+          alert.reason,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
-    ];
+    );
+  }
+
+  String _friendlyError(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('timeout') || msg.contains('timedout')) {
+      return 'Tempo esgotado. Verifique sua conexão.';
+    }
+    if (msg.contains('permission')) {
+      return 'Permissão de localização negada. Ative nas configurações.';
+    }
+    if (msg.contains('location service')) {
+      return 'GPS desativado. Ative a localização do dispositivo.';
+    }
+    return 'Erro ao carregar dados. Tente novamente.';
   }
 
   @override
@@ -217,7 +159,17 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                 const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Text('Mapa de Risco', style: AppTextStyles.headlineMd),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Mapa de Risco', style: AppTextStyles.headlineMd),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _locationLoading ? null : _loadInPhases,
+                        tooltip: 'Atualizar',
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -225,32 +177,82 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(28),
-                      child: Container(
-                        color: const Color(0xFFF5F7FB),
-                        child: _buildMapContent(),
+                      child: Stack(
+                        children: [
+                          FlutterMap(
+  mapController: _mapController,
+  options: MapOptions(
+    initialCenter: _mapCenter,
+    initialZoom: 12,
+  ),
+  children: [
+    TileLayer(
+      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      userAgentPackageName: 'com.floodguard.app',
+    ),
+    if (_currentLocation != null)
+      MarkerLayer(
+        markers: [
+          Marker(
+            width: 32,
+            height: 32,
+            point: _currentLocation!,
+            child: const Icon(
+              Icons.my_location,
+              color: Colors.blue,
+              size: 28,
+            ),
+          ),
+        ],
+      ),
+    if (_alertResult != null)
+      CircleLayer(circles: _buildRiskCircles().toList()),
+  ],
+),
+
+                          if (_locationLoading)
+                            Container(
+                              color: Colors.black.withOpacity(0.35),
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(color: Colors.white),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Obtendo localização...',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 140),
+                const SizedBox(height: 200),
               ],
             ),
+
             Positioned(
-              top: 120,
+              top: 100,
               right: 24,
               child: _LegendCard(),
             ),
+
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: _StatusBottomSheet(
-                error: _error,
-                isLoading: _loading,
+              child: StatusBottomSheet( // corrigido: classe definida abaixo
                 locationStatus: _locationStatus,
-                riskTitle: _riskTitle,
-                riskDescription: _riskDescription,
-                riskColor: _riskColor,
+                locationError: _locationError,
+                alertResult: _alertResult,
+                forecast: _forecast,
+                dataLoading: _dataLoading,
+                onRetry: _loadInPhases,
               ),
             ),
           ],
@@ -258,67 +260,19 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
       ),
     );
   }
-
-  Widget _buildMapContent() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Erro ao carregar mapa:\n$_error',
-            style: AppTextStyles.bodyMd,
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: _mapCenter,
-        initialZoom: 12,
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          subdomains: const ['a', 'b', 'c'],
-          userAgentPackageName: 'dev.gs_space_connect.lumen_orbit',
-        ),
-        PolygonLayer(polygons: _floodPolygons),
-        if (_currentLocation != null)
-          MarkerLayer(
-            markers: [
-              Marker(
-                width: 32,
-                height: 32,
-                point: _currentLocation!,
-                child: const Icon(
-                  Icons.my_location,
-                  color: Colors.blue,
-                  size: 28,
-                ),
-              ),
-            ],
-          ),
-      ],
-    );
-  }
 }
+
+// ─── Legend ──────────────────────────────────────────────────────────────────
 
 class _LegendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 220,
-      padding: const EdgeInsets.all(16),
+      width: 155,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -330,102 +284,191 @@ class _LegendCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Legenda', style: AppTextStyles.headlineMd.copyWith(fontSize: 18)),
-          const SizedBox(height: 12),
+          Text('Legenda',
+              style: AppTextStyles.headlineMd.copyWith(fontSize: 15)),
+          const SizedBox(height: 10),
+          _LegendRow(color: const Color(0xFFF44336), label: 'Muito Alto'),
+          const SizedBox(height: 5),
+          _LegendRow(color: const Color(0xFFFF9800), label: 'Alto'),
+          const SizedBox(height: 5),
+          _LegendRow(color: const Color(0xFFFFEB3B), label: 'Moderado'),
+          const SizedBox(height: 5),
+          _LegendRow(color: const Color(0xFF4CAF50), label: 'Baixo'),
+          const SizedBox(height: 10),
           Row(children: [
-            _Dot(color: AppColors.primary),
-            const SizedBox(width: 8),
-            const Text('Nível Crítico'),
+            const Icon(Icons.my_location, size: 13, color: Colors.blue),
+            const SizedBox(width: 5),
+            Text('Você', style: AppTextStyles.labelSm),
           ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            _Dot(color: AppColors.secondary),
-            const SizedBox(width: 8),
-            const Text('Risco Moderado'),
-          ]),
-          const SizedBox(height: 16),
-          const Text('Localização atual', style: AppTextStyles.labelSm),
         ],
       ),
     );
   }
 }
 
-class _Dot extends StatelessWidget {
+class _LegendRow extends StatelessWidget {
   final Color color;
-
-  const _Dot({required this.color});
+  final String label;
+  const _LegendRow({required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
+    return Row(children: [
+      Container(
+        width: 10, height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
-    );
+      const SizedBox(width: 7),
+      Text(label, style: AppTextStyles.labelSm),
+    ]);
   }
 }
 
-class _StatusBottomSheet extends StatelessWidget {
-  final bool isLoading;
-  final String? error;
-  final String locationStatus;
-  final String riskTitle;
-  final String riskDescription;
-  final Color riskColor;
+// ─── Bottom Sheet ─────────────────────────────────────────────────────────────
 
-  const _StatusBottomSheet({
-    Key? key,
-    this.isLoading = false,
-    this.error,
+class StatusBottomSheet extends StatelessWidget {
+  final String locationStatus;
+  final String? locationError;
+  final AlertResult? alertResult;
+  final WeatherForecast? forecast;
+  final bool dataLoading;
+  final VoidCallback onRetry;
+
+  const StatusBottomSheet({
     required this.locationStatus,
-    required this.riskTitle,
-    required this.riskDescription,
-    required this.riskColor,
-  }) : super(key: key);
+    required this.onRetry,
+    this.locationError,
+    this.alertResult,
+    this.forecast,
+    this.dataLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       decoration: const BoxDecoration(
         color: Color(0xFFFAFAFC),
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, -4)),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
           Text('Risco de Alagamento', style: AppTextStyles.headlineMd),
-          const SizedBox(height: 8),
-          Text(
-            locationStatus,
-            style: AppTextStyles.bodyMd,
-          ),
+          const SizedBox(height: 4),
+
+          // Status da localização
+          Row(children: [
+            Icon(
+              locationError != null ? Icons.location_off : Icons.location_on,
+              size: 14,
+              color: locationError != null ? AppColors.error : Colors.green,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                locationError ?? locationStatus,
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: locationError != null ? AppColors.error : null,
+                ),
+              ),
+            ),
+          ]),
+
+          const SizedBox(height: 14),
+
+          if (dataLoading)
+            const LinearProgressIndicator()
+          else if (alertResult != null) ...[
+            // Card de alerta
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: alertResult!.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: alertResult!.color.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Icon(
+                      alertResult!.shouldAlert
+                          ? Icons.warning_rounded
+                          : Icons.check_circle,
+                      color: alertResult!.color,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      alertResult!.displayTitle,
+                      style: AppTextStyles.headlineMd.copyWith(fontSize: 17),
+                    ),
+                  ]),
+                  const SizedBox(height: 6),
+                  Text(alertResult!.reason, style: AppTextStyles.bodyMd),
+                ],
+              ),
+            ),
+
+            // Linha de previsão de chuva
+            if (forecast != null) ...[
+              const SizedBox(height: 10),
+              Row(children: [
+                const Icon(Icons.water_drop_outlined,
+                    size: 15, color: Colors.blue),
+                const SizedBox(width: 6),
+                Text(
+                  '${forecast!.accumulatedMm24h.toStringAsFixed(1)}mm previstos/24h'
+                  ' · ${forecast!.source}',
+                  style: AppTextStyles.bodyMd,
+                ),
+              ]),
+            ],
+          ] else if (locationError != null) ...[
+            // Estado de erro com botão de retry
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(locationError!, style: AppTextStyles.bodyMd),
+            ),
+          ],
+
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: riskColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
+          Row(children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: const Text('Rotas de Fuga'),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(riskTitle, style: AppTextStyles.headlineMd.copyWith(fontSize: 18)),
-                const SizedBox(height: 8),
-                Text(riskDescription, style: AppTextStyles.bodyMd),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Atualizar'),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {},
-            child: const Text('Ver Rotas de Fuga'),
-          ),
+          ]),
         ],
       ),
     );

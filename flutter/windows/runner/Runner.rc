@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "lumen_orbit" "\0"
+            VALUE "FileDescription", "flood_guard" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "lumen_orbit" "\0"
+            VALUE "InternalName", "flood_guard" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "lumen_orbit.exe" "\0"
-            VALUE "ProductName", "lumen_orbit" "\0"
+            VALUE "OriginalFilename", "flood_guard.exe" "\0"
+            VALUE "ProductName", "flood_guard" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

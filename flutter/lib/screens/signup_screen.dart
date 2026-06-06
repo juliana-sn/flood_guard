@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lumen_orbit/widgets/build_form_field.dart';
-import 'package:lumen_orbit/widgets/build_password_field.dart';
+
 import '../theme.dart';
+import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,36 +15,34 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
 
-  void _togglePasswordVisibility() {
-    setState(() {
-      _isPasswordVisible = !_isPasswordVisible;
-    });
-  }
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
 
-  void _toggleConfirmPasswordVisibility() {
-    setState(() {
-      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-    });
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
   }
 
   Future<void> _handleSignup() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate loading
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    // TODO: Implement actual signup logic
-    if (mounted) {
+    if (_passwordController.text != _confirmController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+        const SnackBar(content: Text('As senhas não conferem!')),
       );
+      return;
     }
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isLoading = false);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+    );
   }
 
   @override
@@ -54,37 +52,26 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Navigation Bar
+            // Top Nav
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 border: Border(
-                  bottom: BorderSide(
-                    color: AppColors.surfaceVariant,
-                    width: 1,
-                  ),
-                ),
+                    bottom: BorderSide(
+                        color: AppColors.surfaceVariant, width: 1)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.waves,
-                        color: AppColors.primary,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'OrbitFlood',
-                        style: AppTextStyles.headlineMd.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                  Row(children: [
+                    Icon(Icons.waves, color: AppColors.primary, size: 24),
+                    const SizedBox(width: 8),
+                    Text('FloodGuard',
+                        style: AppTextStyles.headlineMd
+                            .copyWith(fontWeight: FontWeight.bold)),
+                  ]),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
@@ -94,7 +81,6 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
 
-            // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -102,76 +88,70 @@ class _SignupScreenState extends State<SignupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 40),
-
-                    // Header Section
                     Text(
                       'Criar Conta',
                       style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.onSurface,
-                      ),
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.onSurface),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Monitore níveis de água e receba alertas críticos em tempo real.',
                       style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.onSurfaceVariant.withOpacity(0.7),
-                      ),
+                          color:
+                              AppColors.onSurfaceVariant.withOpacity(0.7)),
                       textAlign: TextAlign.center,
                     ),
-
                     const SizedBox(height: 40),
 
-                    // Registration Form
-                    BuildFormField(
+                    _SignupField(
+                      controller: _nameController,
                       label: 'Nome Completo',
                       icon: Icons.person_outline,
                       hint: 'Como deseja ser chamado?',
                     ),
-
                     const SizedBox(height: 24),
-
-                    BuildFormField(
+                    _SignupField(
+                      controller: _emailController,
                       label: 'Email',
                       icon: Icons.mail_outline,
                       hint: 'seu@email.com',
                       keyboardType: TextInputType.emailAddress,
                     ),
-
                     const SizedBox(height: 24),
-
-                    BuildPasswordField(
+                    _SignupPasswordField(
+                      controller: _passwordController,
                       label: 'Senha',
                       icon: Icons.lock_outline,
                       hint: '••••••••',
                       isVisible: _isPasswordVisible,
-                      onToggleVisibility: _togglePasswordVisibility,
+                      onToggle: () => setState(
+                          () => _isPasswordVisible = !_isPasswordVisible),
                     ),
-
                     const SizedBox(height: 24),
-
-                    BuildPasswordField(
+                    _SignupPasswordField(
+                      controller: _confirmController,
                       label: 'Confirmar Senha',
                       icon: Icons.lock_reset,
                       hint: 'Repita sua senha',
                       isVisible: _isConfirmPasswordVisible,
-                      onToggleVisibility: _toggleConfirmPasswordVisibility,
+                      onToggle: () => setState(() =>
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible),
                     ),
-
                     const SizedBox(height: 32),
 
-                    // Register Button
                     ElevatedButton(
                       onPressed: _isLoading ? null : _handleSignup,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.secondaryContainer,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+                            borderRadius: BorderRadius.circular(30)),
                         elevation: 2,
                       ),
                       child: _isLoading
@@ -179,30 +159,22 @@ class _SignupScreenState extends State<SignupScreen> {
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
+                                  strokeWidth: 2, color: Colors.white),
                             )
                           : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  'Cadastrar',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward, size: 20),
+                                Text('Cadastrar',
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold)),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward, size: 20),
                               ],
                             ),
                     ),
-
                     const SizedBox(height: 32),
 
-                    // Already have account link
                     Center(
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -217,81 +189,138 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 24),
 
-                    // Divider with "OU"
-                    Row(
-                      children: [
-                        const Expanded(
+                    Row(children: [
+                      const Expanded(
                           child: Divider(
-                            color: AppColors.surfaceVariant,
-                            thickness: 1,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'OU',
+                              color: AppColors.surfaceVariant)),
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text('OU',
                             style: AppTextStyles.labelSm.copyWith(
-                              color:
-                                  AppColors.onSurfaceVariant.withOpacity(0.5),
-                            ),
-                          ),
-                        ),
-                        const Expanded(
+                                color: AppColors.onSurfaceVariant
+                                    .withOpacity(0.5))),
+                      ),
+                      const Expanded(
                           child: Divider(
-                            color: AppColors.surfaceVariant,
-                            thickness: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-
+                              color: AppColors.surfaceVariant)),
+                    ]),
                     const SizedBox(height: 24),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.g_mobiledata),
-                            label: const Text('Google'),
-                            style: ElevatedButton.styleFrom(
-                              // Cor de fundo
-                              foregroundColor:
-                                  AppColors.primary, // Cor do texto e ícone
-                            ),
-                          ),
+                    Row(children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.g_mobiledata),
+                          label: const Text('Google'),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.apple),
-                            label: const Text('Apple'),
-                            style: ElevatedButton.styleFrom(
-                              // Cor de fundo
-                              foregroundColor:
-                                  AppColors.primary, // Cor do texto e ícone
-                            ),
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.apple),
+                          label: const Text('Apple'),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary),
                         ),
-                      ],
-                    ),
-
-                    // Social Login Buttons
-
+                      ),
+                    ]),
                     const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
-            // Decorative Footer Wave
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SignupField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final String hint;
+  final TextInputType keyboardType;
+
+  const _SignupField({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    required this.hint,
+    this.keyboardType = TextInputType.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.labelLg),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, color: AppColors.primary),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SignupPasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final String hint;
+  final bool isVisible;
+  final VoidCallback onToggle;
+
+  const _SignupPasswordField({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    required this.hint,
+    required this.isVisible,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.labelLg),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          obscureText: !isVisible,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, color: AppColors.primary),
+            suffixIcon: IconButton(
+              icon: Icon(
+                isVisible ? Icons.visibility_off : Icons.visibility,
+                color: AppColors.onSurfaceVariant,
+              ),
+              onPressed: onToggle,
+            ),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,34 +1,44 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:lumen_orbit/main.dart';
-import 'package:lumen_orbit/widgets/build_form_field.dart';
-import 'package:lumen_orbit/widgets/build_password_field.dart';
+import 'package:flutter/material.dart';
+
 import '../theme.dart';
 import 'signup_screen.dart';
+
+// Substitua pelo seu AppShell real
+// import 'package:seu_app/main.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
+  @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-  class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
 
-  void _togglePasswordVisibility() {
-    setState(() {
-      _isPasswordVisible = !_isPasswordVisible;
-    });
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
-  void _toggleConfirmPasswordVisibility() {
-    setState(() {
-      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-    });
-  }
+  void _togglePasswordVisibility() =>
+      setState(() => _isPasswordVisible = !_isPasswordVisible);
 
+  Future<void> _handleLogin() async {
+    setState(() => _isLoading = true);
+    // TODO: Implementar autenticação real (Firebase, Supabase, etc.)
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() => _isLoading = false);
+    if (!mounted) return;
+    // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AppShell()));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,10 +52,7 @@ class LoginScreen extends StatefulWidget {
             children: [
               const SizedBox(height: 48),
               const Center(
-                child: Text(
-                  'OrbitFlood',
-                  style: AppTextStyles.headlineLg,
-                ),
+                child: Text('Flood Guard', style: AppTextStyles.headlineLg),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -60,21 +67,26 @@ class LoginScreen extends StatefulWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              const BuildFormField(
+
+              // Email
+              _FormField(
+                controller: _emailController,
                 label: 'Email',
                 icon: Icons.mail_outline,
                 hint: 'seu@email.com',
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 24),
-              
-              BuildPasswordField(
+
+              // Senha
+              _PasswordField(
+                controller: _passwordController,
                 label: 'Senha',
-                icon: Icons.lock_outline,
                 hint: '••••••••',
                 isVisible: _isPasswordVisible,
-                onToggleVisibility: _togglePasswordVisibility,
+                onToggle: _togglePasswordVisibility,
               ),
+
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -82,146 +94,102 @@ class LoginScreen extends StatefulWidget {
                   child: const Text(
                     'Esqueci minha senha?',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight(400),
-                      wordSpacing: -1.5,
-                    ),
-                    textAlign: TextAlign.right,
+                        fontSize: 12, color: AppColors.primary),
                   ),
                 ),
               ),
               const SizedBox(height: 24),
+
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AppShell()));
-                },
+                onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary, // Cor de fundo do botão
-                  foregroundColor: Colors.white, // Cor do texto e do ícone
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 32, vertical: 20), // Espaçamento interno
-                  elevation: 5, // Altura da sombra
-                  textStyle: AppTextStyles.labelSm,
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(30), // Bordas arredondadas
-                  ),
+                      borderRadius: BorderRadius.circular(30)),
+                  elevation: 5,
                 ),
-                child: const Text(
-                  'Entrar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight(800),
-                    fontFamily: 'Plus Jakarta Sans',
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white),
+                      )
+                    : const Text(
+                        'Entrar',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Plus Jakarta Sans'),
+                      ),
               ),
               const SizedBox(height: 24),
+
               Center(
                 child: Text.rich(
-                  TextSpan(
-                    children: [
-                      // Parte 1: Texto normal
-                      const TextSpan(
-                        text: 'Não tem uma conta? ',
-                        style: const TextStyle(
-                          color: Color(0xFF2D1600), // Cor do texto comum
+                  TextSpan(children: [
+                    const TextSpan(
+                      text: 'Não tem uma conta? ',
+                      style: TextStyle(
+                          color: Color(0xFF2D1600), fontSize: 13),
+                    ),
+                    TextSpan(
+                      text: 'Criar conta',
+                      style: const TextStyle(
+                          color: AppColors.secondary,
                           fontSize: 13,
-                          fontWeight: FontWeight(400),
-                        ),
-                      ),
-                      // Parte 2: O Link com destaque e clique
-                      TextSpan(
-                        text: 'Criar conta',
-                        style: const TextStyle(
-                          color: AppColors
-                              .secondary, // Sua cor de destaque do tema
-                          fontSize: 13,
-                          fontWeight: FontWeight(800), // Destaque em negrito
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            Navigator.push(
+                          fontWeight: FontWeight.w800),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const SignupScreen(),
-                              ),
-                            );
-                          },
-                      ),
-                    ],
-                  ),
+                                  builder: (_) => const SignupScreen()),
+                            ),
+                    ),
+                  ]),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 24),
-              const Row(
-                children: const [
-                  Expanded(
-                    child: Divider(
-                      color: AppColors
-                          .onSurface, // Ajuste a cor se preferir mais clara
-                      thickness: 1, // Espessura da linha
-                      endIndent:
-                          15, // Espaço entre a linha da esquerda e o texto
-                    ),
-                  ),
-                  const Center(
-                    child: const Text(
-                      'OU ENTRE COM',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight(300),
-                          color: AppColors.onSurface,
-                          fontFamily: 'Plus Jakarta Sans',
-                          wordSpacing: -0.5),
-                    ),
-                  ),
-                  Expanded(
-                    child: Divider(
-                      color: AppColors
-                          .onSurface, // Ajuste a cor se preferir mais clara
-                      thickness: 1, // Espessura da linha
-                      indent: 15,
-                    ),
-                  ),
-                ],
-              ),
+
+              const Row(children: [
+                Expanded(
+                    child: Divider(color: AppColors.onSurface, endIndent: 15)),
+                Text('OU ENTRE COM',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w300,
+                        color: AppColors.onSurface,
+                        fontFamily: 'Plus Jakarta Sans')),
+                Expanded(
+                    child: Divider(color: AppColors.onSurface, indent: 15)),
+              ]),
               const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.g_mobiledata),
-                      label: const Text('Google'),
-                      style: ElevatedButton.styleFrom(
-                        // Cor de fundo
-                        foregroundColor:
-                            AppColors.primary, // Cor do texto e ícone
-                      ),
-                    ),
+
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.g_mobiledata),
+                    label: const Text('Google'),
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.apple),
-                      label: const Text('Apple'),
-                      style: ElevatedButton.styleFrom(
-                        // Cor de fundo
-                        foregroundColor:
-                            AppColors.primary, // Cor do texto e ícone
-                      ),
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.apple),
+                    label: const Text('Apple'),
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary),
                   ),
-                ],
-              ),
+                ),
+              ]),
               const SizedBox(height: 24),
             ],
           ),
@@ -231,5 +199,86 @@ class LoginScreen extends StatefulWidget {
   }
 }
 
+// ─── Widgets locais (substitui BuildFormField / BuildPasswordField) ───────────
 
+class _FormField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final String hint;
+  final TextInputType keyboardType;
 
+  const _FormField({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    required this.hint,
+    this.keyboardType = TextInputType.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.labelLg),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, color: AppColors.primary),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final bool isVisible;
+  final VoidCallback onToggle;
+
+  const _PasswordField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.isVisible,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.labelLg),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          obscureText: !isVisible,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon:
+                Icon(Icons.lock_outline, color: AppColors.primary),
+            suffixIcon: IconButton(
+              icon: Icon(
+                isVisible ? Icons.visibility_off : Icons.visibility,
+                color: AppColors.onSurfaceVariant,
+              ),
+              onPressed: onToggle,
+            ),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      ],
+    );
+  }
+}

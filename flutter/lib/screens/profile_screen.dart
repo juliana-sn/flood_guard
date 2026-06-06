@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../services/cache_service.dart';
 import '../theme.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -15,14 +17,11 @@ class ProfileScreen extends StatelessWidget {
             children: [
               // Top App Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.waves,
-                      color: AppColors.primary,
-                      size: 24,
-                    ),
+                    Icon(Icons.waves, color: AppColors.primary, size: 24),
                     const SizedBox(width: 16),
                     Text(
                       'Meu Perfil',
@@ -31,133 +30,106 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
-              // User Profile Card
+
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _ProfileCard(),
               ),
-              
+
               const SizedBox(height: 24),
-              
-              // Account Settings Section
+
               _MenuSection(
                 title: 'CONFIGURAÇÕES DA CONTA',
                 items: [
                   _MenuItemData(
                     icon: Icons.person_outline,
                     title: 'Informações Pessoais',
-                    onTap: () {
-                      // TODO: Navigate to personal info screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Informações Pessoais')),
-                      );
-                    },
+                    onTap: () => _snack(context, 'Informações Pessoais'),
                   ),
                   _MenuItemData(
                     icon: Icons.home_outlined,
                     title: 'Endereços Salvos',
-                    onTap: () {
-                      // TODO: Navigate to saved addresses screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Endereços Salvos')),
-                      );
-                    },
+                    onTap: () => _snack(context, 'Endereços Salvos'),
                   ),
                   _MenuItemData(
                     icon: Icons.notifications_outlined,
                     title: 'Notificações',
-                    onTap: () {
-                      // TODO: Navigate to notifications settings screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Notificações')),
-                      );
-                    },
+                    onTap: () => _snack(context, 'Notificações'),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
-              // Safety & Support Section
+
               _MenuSection(
                 title: 'SEGURANÇA E SUPORTE',
                 items: [
                   _MenuItemData(
                     icon: Icons.history,
                     title: 'Histórico de Alertas',
-                    onTap: () {
-                      // TODO: Navigate to alert history screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Histórico de Alertas')),
-                      );
-                    },
+                    onTap: () => _snack(context, 'Histórico de Alertas'),
                   ),
                   _MenuItemData(
                     icon: Icons.contact_phone_outlined,
                     title: 'Contatos de Emergência',
-                    onTap: () {
-                      // TODO: Navigate to emergency contacts screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Contatos de Emergência')),
-                      );
-                    },
+                    onTap: () => _snack(context, 'Contatos de Emergência'),
                   ),
                   _MenuItemData(
                     icon: Icons.help_outline,
                     title: 'Ajuda e Suporte',
-                    onTap: () {
-                      // TODO: Navigate to help & support screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Ajuda e Suporte')),
-                      );
-                    },
+                    onTap: () => _snack(context, 'Ajuda e Suporte'),
                   ),
                 ],
               ),
-              
+
+              const SizedBox(height: 24),
+
+              // Seção nova: cache e dados
+              _MenuSection(
+                title: 'DADOS DO APP',
+                items: [
+                  _MenuItemData(
+                    icon: Icons.delete_sweep_outlined,
+                    title: 'Limpar cache local',
+                    onTap: () async {
+                      final cache = await CacheService.create();
+                      await cache.clearAll();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Cache limpo com sucesso!')),
+                        );
+                      }
+                    },
+                  ),
+                  _MenuItemData(
+                    icon: Icons.info_outline,
+                    title: 'Fontes de dados',
+                    onTap: () => _showDataSources(context),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 32),
-              
-              // Logout Section
+
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
-                    // Logout Button
+                    // Logout
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {
-                          // TODO: Implement logout functionality
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Sair'),
-                              content: const Text('Deseja realmente sair da sua conta?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancelar'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    // Navigate to login screen
-                                  },
-                                  child: const Text('Sair', style: TextStyle(color: AppColors.error)),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                        onTap: () => _showLogoutDialog(context),
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            border: Border.all(color: AppColors.neutralBorder),
+                            border:
+                                Border.all(color: AppColors.neutralBorder),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
@@ -170,27 +142,22 @@ class ProfileScreen extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.logout,
-                                color: AppColors.error,
-                                size: 20,
-                              ),
+                              Icon(Icons.logout,
+                                  color: AppColors.error, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Sair',
-                                style: AppTextStyles.headlineSm.copyWith(
-                                  color: AppColors.error,
-                                ),
+                                style: AppTextStyles.headlineSm
+                                    .copyWith(color: AppColors.error),
                               ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
-                    // App Version
+
                     Text(
                       'Flood Guard v1.0.0',
                       style: AppTextStyles.labelSm.copyWith(
@@ -198,20 +165,133 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      'Dados: CEMADEN · CPTEC/INPE · OpenWeather · IBGE',
+                      style: AppTextStyles.labelSm.copyWith(
+                        color: AppColors.onSurfaceVariant.withOpacity(0.4),
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               ),
-              
-              const SizedBox(height: 100), // Space for bottom nav
+
+              const SizedBox(height: 100),
             ],
           ),
         ),
       ),
     );
   }
+
+  void _snack(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair'),
+        content: const Text('Deseja realmente sair da sua conta?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Sair',
+                style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDataSources(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Fontes de dados', style: AppTextStyles.headlineMd),
+            const SizedBox(height: 16),
+            _DataSourceRow(
+              icon: Icons.water_damage_outlined,
+              name: 'CEMADEN',
+              desc: 'Dados de pluviômetros em tempo real',
+            ),
+            _DataSourceRow(
+              icon: Icons.cloud_outlined,
+              name: 'CPTEC / INPE',
+              desc: 'Previsão meteorológica nacional',
+            ),
+            _DataSourceRow(
+              icon: Icons.map_outlined,
+              name: 'GeoServer INPE',
+              desc: 'Polígonos de zonas de risco',
+            ),
+            _DataSourceRow(
+              icon: Icons.location_city_outlined,
+              name: 'IBGE',
+              desc: 'Geocodificação de municípios',
+            ),
+            _DataSourceRow(
+              icon: Icons.thunderstorm_outlined,
+              name: 'OpenWeather',
+              desc: 'Previsão de chuva por coordenadas (fallback)',
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-// Profile Card Widget
+class _DataSourceRow extends StatelessWidget {
+  final IconData icon;
+  final String name;
+  final String desc;
+  const _DataSourceRow(
+      {required this.icon, required this.name, required this.desc});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 20),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, style: AppTextStyles.headlineSm.copyWith(fontSize: 14)),
+              Text(desc,
+                  style: AppTextStyles.bodyMd
+                      .copyWith(color: AppColors.onSurfaceVariant)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Profile Card ─────────────────────────────────────────────────────────────
+
 class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -231,7 +311,6 @@ class _ProfileCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar with Edit Button
           Stack(
             children: [
               Container(
@@ -240,9 +319,7 @@ class _ProfileCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.primaryContainer,
-                    width: 4,
-                  ),
+                      color: AppColors.primaryContainer, width: 4),
                   image: const DecorationImage(
                     image: NetworkImage(
                       'https://lh3.googleusercontent.com/aida-public/AB6AXuA0NGMyjznWOf8sW9FhyZ92wIAVQHyQJYJhGqbepGr-pS6CK9fgGEhMA4hfIkHZ1h3olGenaZbO5MkPIM8ASo1moBEVVXne6nm7VVjpFjD9rUEJz-TXP7wKoDO0vwrYnMUeBiQVh--5JU1uTis4stEQPQVs2jqpm92OGsoGjRG6Rlo_RoMjTzlW38JkHmLfBWkGs6hDMk5kTgE9TXGEi42Ct4VOwFvwr3cVwGYeEEt8yVuJDaRxBK4F6ym-g1BFKJAX_g0EHXjp7EKa',
@@ -261,33 +338,22 @@ class _ProfileCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
-                  child: const Icon(
-                    Icons.edit,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.edit, color: Colors.white, size: 16),
                 ),
               ),
             ],
           ),
-          
           const SizedBox(width: 16),
-          
-          // User Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'João Silva',
-                  style: AppTextStyles.headlineSm,
-                ),
+                Text('João Silva', style: AppTextStyles.headlineSm),
                 const SizedBox(height: 4),
                 Text(
                   'joao.silva@email.com',
-                  style: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
+                  style: AppTextStyles.bodyMd
+                      .copyWith(color: AppColors.onSurfaceVariant),
                 ),
               ],
             ),
@@ -298,15 +364,13 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-// Menu Section Widget
+// ─── Menu Section ────────────────────────────────────────────────────────────
+
 class _MenuSection extends StatelessWidget {
   final String title;
   final List<_MenuItemData> items;
 
-  const _MenuSection({
-    required this.title,
-    required this.items,
-  });
+  const _MenuSection({required this.title, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -315,18 +379,11 @@ class _MenuSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section Header
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 8),
-            child: Text(
-              title,
-              style: AppTextStyles.labelLg.copyWith(
-                letterSpacing: 1.4,
-              ),
-            ),
+            child: Text(title,
+                style: AppTextStyles.labelLg.copyWith(letterSpacing: 1.4)),
           ),
-          
-          // Menu Items Container
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -348,10 +405,7 @@ class _MenuSection extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Colors.grey.shade100,
-                      ),
+                          height: 1, color: Colors.grey.shade100),
                     ),
                 ],
               ],
@@ -363,7 +417,6 @@ class _MenuSection extends StatelessWidget {
   }
 }
 
-// Menu Item Data Class
 class _MenuItemData {
   final IconData icon;
   final String title;
@@ -376,10 +429,8 @@ class _MenuItemData {
   });
 }
 
-// Menu Item Widget
 class _MenuItem extends StatelessWidget {
   final _MenuItemData data;
-
   const _MenuItem({required this.data});
 
   @override
@@ -393,7 +444,6 @@ class _MenuItem extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Icon Container
               Container(
                 width: 40,
                 height: 40,
@@ -401,29 +451,12 @@ class _MenuItem extends StatelessWidget {
                   color: AppColors.surfaceContainerHigh,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  data.icon,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
+                child: Icon(data.icon, color: AppColors.primary, size: 20),
               ),
-              
               const SizedBox(width: 16),
-              
-              // Title
               Expanded(
-                child: Text(
-                  data.title,
-                  style: AppTextStyles.bodyLg,
-                ),
-              ),
-              
-              // Chevron
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.outline,
-                size: 24,
-              ),
+                  child: Text(data.title, style: AppTextStyles.bodyLg)),
+              Icon(Icons.chevron_right, color: AppColors.outline, size: 24),
             ],
           ),
         ),
@@ -431,4 +464,3 @@ class _MenuItem extends StatelessWidget {
     );
   }
 }
-

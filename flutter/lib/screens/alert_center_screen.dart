@@ -1,96 +1,132 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/flood_alert_coordinator.dart';
 
-class AlertCenterScreen extends StatelessWidget {
+class AlertCenterScreen extends StatefulWidget {
   const AlertCenterScreen({super.key});
+
+  @override
+  State<AlertCenterScreen> createState() => _AlertCenterScreenState();
+}
+
+class _AlertCenterScreenState extends State<AlertCenterScreen> {
+  late final FloodAlertCoordinator _coordinator;
+  CoordinatorResult? _result;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _coordinator = FloodAlertCoordinator();
+    _runCoordinator(); // roda automaticamente ao abrir a tela
+  }
+
+  Future<void> _runCoordinator() async {
+    setState(() => _loading = true);
+    final result = await _coordinator.run();
+    setState(() {
+      _result = result;
+      _loading = false;
+    });
+  }
+
+  Future<void> _callNumber(String number) async {
+    final uri = Uri.parse("tel:$number");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Central de Alerta', style: AppTextStyles.headlineMd),
-              const SizedBox(height: 20),
-              _StatusCard(
-                title: 'Crítico',
-                description: 'Tempestade severa iminente. Acompanhe as notificações e evite áreas baixas.',
-                color: const Color(0xFFFF7E7B),
-              ),
-              const SizedBox(height: 16),
-              _StatusCard(
-                title: 'Seguro',
-                description: 'Condições normais na maioria das regiões monitoradas.',
-                color: AppColors.success,
-              ),
-              const SizedBox(height: 24),
-              Text('Monitoramento ao vivo', style: AppTextStyles.headlineMd),
-              const SizedBox(height: 16),
-              Container(
-                height: 260,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F7FB),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.thermostat, size: 72, color: AppColors.outline),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Visual de chuva em tempo real',
-                        style: AppTextStyles.bodyMd,
-                        textAlign: TextAlign.center,
+      appBar: AppBar(title: const Text('Centro de Alertas')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _result == null
+              ? const Center(child: Text('Nenhum dado carregado'))
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Text(
+                      'Município: ${_result!.location.cityName} / ${_result!.location.uf}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Previsão: ${_result!.forecast.accumulatedMm24h.toStringAsFixed(1)}mm (${_result!.forecast.source})',
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Risco: ${_result!.risk.displayTitle}',
+                      style: TextStyle(color: _result!.alert.color),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Status: ${_result!.alert.displayTitle} — ${_result!.alert.reason}',
+                      style: TextStyle(color: _result!.alert.color),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Card explicativo
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Use os números abaixo apenas em situações de emergência.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Seção de contatos de emergência
+                    Text('Contatos de Emergência',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _callNumber("199"),
+                      icon: const Icon(Icons.phone, color: Colors.white),
+                      label: const Text('Defesa Civil (199)',
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _callNumber("193"),
+                      icon: const Icon(Icons.local_fire_department,
+                          color: Colors.white),
+                      label: const Text('Bombeiros (193)',
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _callNumber("192"),
+                      icon: const Icon(Icons.medical_services,
+                          color: Colors.white),
+                      label: const Text('SAMU (192)',
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {},
-                child: const Text('Ligar para Defesa Civil (199)'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusCard extends StatelessWidget {
-  final String title;
-  final String description;
-  final Color color;
-
-  const _StatusCard({
-    required this.title,
-    required this.description,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTextStyles.headlineMd.copyWith(fontSize: 18)),
-          const SizedBox(height: 8),
-          Text(description, style: AppTextStyles.bodyMd),
-        ],
-      ),
     );
   }
 }

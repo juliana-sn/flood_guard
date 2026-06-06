@@ -1,23 +1,41 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
-class BuildFormField extends StatelessWidget {
-  // 1. Definição correta das variáveis (com TextInputType? corrigido)
+class BuildFormField extends StatefulWidget {
   final String label;
   final IconData icon;
   final String hint;
   final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
 
-  // 2. Criação do construtor obrigatório para inicializar as variáveis
   const BuildFormField({
     super.key,
     required this.label,
     required this.icon,
     required this.hint,
-    this.keyboardType, // Opcional, pois pode ser nulo
+    this.keyboardType,
+    this.onChanged,
   });
 
-  // 3. Implementação do método build
+  @override
+  State<BuildFormField> createState() => _BuildFormFieldState();
+}
+
+class _BuildFormFieldState extends State<BuildFormField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -26,7 +44,7 @@ class BuildFormField extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 8, bottom: 8),
           child: Text(
-            label,
+            widget.label,
             style: AppTextStyles.labelLg.copyWith(
               color: AppColors.onSurface,
             ),
@@ -38,14 +56,16 @@ class BuildFormField extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: TextField(
-            keyboardType: keyboardType,
+            controller: _controller,
+            keyboardType: widget.keyboardType,
+            onChanged: widget.onChanged,
             decoration: InputDecoration(
-              hintText: hint,
+              hintText: widget.hint,
               hintStyle: TextStyle(
                 color: AppColors.onSurfaceVariant.withOpacity(0.5),
               ),
               prefixIcon: Icon(
-                icon,
+                widget.icon,
                 color: AppColors.onSurfaceVariant,
               ),
               border: OutlineInputBorder(

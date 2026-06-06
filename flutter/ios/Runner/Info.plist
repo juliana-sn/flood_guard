@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Lumen Orbit</string>
+	<string>Flood Guard</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>lumen_orbit</string>
+	<string>flood_guard</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -67,6 +67,58 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>O Lumen Orbit usa sua localização para exibir áreas de risco próximas à sua posição.</string>
+	<string>O Flood Guard usa sua localização para exibir áreas de risco próximas à sua posição.</string>
+	<!-- Permissões de localização -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Usado para verificar riscos de enchente na sua área</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>Necessário para alertas de risco na sua localização atual</string>
+
+<!-- Libera HTTP apenas para os domínios do INPE/CEMADEN/CPTEC -->
+<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSExceptionDomains</key>
+    <dict>
+        <!-- CEMADEN - pluviômetros -->
+        <key>sjc.salvar.cemaden.gov.br</key>
+        <dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <true/>
+            <key>NSIncludesSubdomains</key>
+            <true/>
+        </dict>
+        <!-- GeoServer INPE - polígonos de risco -->
+        <key>geoserver.inpe.br</key>
+        <dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <true/>
+            <key>NSIncludesSubdomains</key>
+            <true/>
+        </dict>
+        <!-- CPTEC - previsão do tempo -->
+        <key>servicos.cptec.inpe.br</key>
+        <dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <true/>
+            <key>NSIncludesSubdomains</key>
+            <true/>
+        </dict>
+        <!-- Nominatim - geocoding reverso (já é HTTPS, mas por segurança) -->
+        <key>nominatim.openstreetmap.org</key>
+        <dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <false/>
+        </dict>
+    </dict>
+</dict>
+
+<!-- Background modes -->
+<key>UIBackgroundModes</key>
+<array>
+    <string>fetch</string>
+    <string>location</string>
+</array>
 </dict>
 </plist>

@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import router
 
 app = FastAPI(
-    title="Lumen Orbit API",
-    description="API de monitoramento hidrológico para o OrbitFlood.",
+    title="Flood Guard API",
+    description="API de monitoramento hidrológico para o Flood Guard.",
     version="0.1.0",
 )
 
@@ -20,4 +20,4 @@ app.include_router(router, prefix="/api")
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "Lumen Orbit API"}
+    return {"status": "ok", "service": "Flood Guard API"}

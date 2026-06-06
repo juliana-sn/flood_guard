@@ -1,11 +1,11 @@
-# Lumen Orbit
+# Flood Guard 
 
-Projeto inicial para o aplicativo *Lumen Orbit* com frontend em Flutter e backend em FastAPI.
+Projeto inicial para o aplicativo *Flood Guard* com frontend em Flutter e backend em FastAPI.
 
 ## Estrutura
 
 - `backend/` - API REST em FastAPI.
-- `flutter/` - Aplicativo Flutter com telas iniciais do OrbitFlood.
+- `flutter/` - Aplicativo Flutter com telas iniciais do Flood Guard.
 - `design/` - Documento de design de produto e experiência.
 
 ## Backend
@@ -20,6 +20,3 @@ Projeto inicial para o aplicativo *Lumen Orbit* com frontend em Flutter e backen
 2. Execute: `flutter pub get`
 3. Inicie: `flutter run`
 
-## Design
-
-Veja `design/orbitflood_design.md` para o conceito da experiência de usuário e das telas iniciais.
