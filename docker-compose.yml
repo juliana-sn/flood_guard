@@ -1,0 +1,21 @@
+services:
+  api:
+    build: ./backend
+    container_name: flood_guard_api
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+      - SECRET_KEY=${SECRET_KEY:-flood_guard_dev_secret_2025}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=10080
+      - DATABASE_URL=sqlite+aiosqlite:///./data/flood_guard.db
+    volumes:
+      # Persiste o banco SQLite fora do container
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

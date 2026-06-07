@@ -113,7 +113,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         textAlign: TextAlign.center),
                     const SizedBox(height: 8),
                     Text(
-                      'Monitore níveis de água e receba alertas críticos em tempo real.',
+                      'Receba alertas críticos de enchentes em tempo real.',
                       style: AppTextStyles.bodyMd.copyWith(
                           color: AppColors.onSurfaceVariant.withOpacity(0.7)),
                       textAlign: TextAlign.center,
