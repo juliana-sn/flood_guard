@@ -143,18 +143,11 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: ChangeNotifierProvider<MapsController>(
-        create: (context) => MapsController(),
-        child: Builder(
-          builder: (context) {
-            final local = context.watch<MapsController>();
-
-            // Mantém a lógica de string para exibir coordenadas ou mensagens de erro do GPS
-            String mensagem = local.erro == ''
-                ? 'Lat: ${local.lat.toStringAsFixed(4)} | Long: ${local.long.toStringAsFixed(4)}'
-                : local.erro;
-
-            return Stack(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 24),
                 Padding(
