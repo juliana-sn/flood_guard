@@ -8,13 +8,25 @@ Projeto inicial para o aplicativo *Flood Guard* com frontend em Flutter e backen
 - `flutter/` - Aplicativo Flutter com telas iniciais do Flood Guard.
 - `design/` - Documento de design de produto e experiência.
 
-## Backend
 
-1. Crie um ambiente virtual Python.
-2. Instale dependências: `pip install -r backend/requirements.txt`
-3. Execute: `uvicorn backend.app.main:app --reload`
+## Como rodar o backend
 
-## Frontend
+**Pré-requisito:** Docker Desktop instalado.
+
+1. Clone o repositório
+2. Renomeie `.env.example` para `.env`
+3. Execute:
+
+```bash
+docker compose up --build
+```
+
+4. API disponível em: http://localhost:8000
+5. Documentação interativa: http://localhost:8000/docs
+
+Para parar: `docker compose down`
+
+## Como rodar o frontend
 
 1. Abra `flutter/` no Flutter.
 2. Execute: `flutter pub get`
