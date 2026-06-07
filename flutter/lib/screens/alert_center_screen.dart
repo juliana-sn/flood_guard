@@ -13,6 +13,7 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
   late final FloodAlertCoordinator _coordinator;
   CoordinatorResult? _result;
   bool _loading = false;
+  String? _error;
 
   @override
   void initState() {
@@ -22,12 +23,25 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
   }
 
   Future<void> _runCoordinator() async {
-    setState(() => _loading = true);
-    final result = await _coordinator.run();
     setState(() {
-      _result = result;
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+
+    try {
+      final result = await _coordinator.run();
+      if (!mounted) return;
+      setState(() {
+        _result = result;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = "Erro ao carregar alertas: $e";
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _callNumber(String number) async {
@@ -43,90 +57,127 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
       appBar: AppBar(title: const Text('Centro de Alertas')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _result == null
-              ? const Center(child: Text('Nenhum dado carregado'))
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Text(
-                      'Município: ${_result!.location.cityName} / ${_result!.location.uf}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Previsão: ${_result!.forecast.accumulatedMm24h.toStringAsFixed(1)}mm (${_result!.forecast.source})',
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Risco: ${_result!.risk.displayTitle}',
-                      style: TextStyle(color: _result!.alert.color),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Status: ${_result!.alert.displayTitle} — ${_result!.alert.reason}',
-                      style: TextStyle(color: _result!.alert.color),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Card explicativo
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(16),
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          color: Colors.red, size: 48),
+                      const SizedBox(height: 12),
+                      Text(_error!,
+                          style: Theme.of(context).textTheme.bodyMedium),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: _runCoordinator,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Tentar novamente'),
                       ),
-                      child: Row(
+                    ],
+                  ),
+                )
+              : _result == null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.warning, color: Colors.red),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Use os números abaixo apenas em situações de emergência.',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
+                          const Icon(Icons.info_outline,
+                              color: Colors.grey, size: 48),
+                          const SizedBox(height: 12),
+                          const Text('Nenhum dado carregado'),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: _runCoordinator,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Atualizar'),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        Text(
+                          'Município: ${_result!.cityName} / ${_result!.uf}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Previsão: ${_result!.rainfallMm.toStringAsFixed(1)}mm (${_result!.weatherSource})',
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Risco: ${_result!.riskLevel == "none" 
+                              ? "Nenhum risco mapeado" 
+                              : _result!.riskMessage}',
+                          style: TextStyle(color: Color(_result!.colorValue)),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Status: ${_result!.severityTitle} — ${_result!.reason}',
+                          style: TextStyle(color: Color(_result!.colorValue)),
+                        ),
+                        const SizedBox(height: 24),
 
-                    // Seção de contatos de emergência
-                    Text('Contatos de Emergência',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: () => _callNumber("199"),
-                      icon: const Icon(Icons.phone, color: Colors.white),
-                      label: const Text('Defesa Civil (199)',
-                          style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                      ),
+                        // Card explicativo
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning, color: Colors.red),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Use os números abaixo apenas em situações de emergência.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Seção de contatos de emergência
+                        Text('Contatos de Emergência',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => _callNumber("199"),
+                          icon: const Icon(Icons.phone, color: Colors.white),
+                          label: const Text('Defesa Civil (199)',
+                              style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () => _callNumber("193"),
+                          icon: const Icon(Icons.local_fire_department,
+                              color: Colors.white),
+                          label: const Text('Bombeiros (193)',
+                              style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () => _callNumber("192"),
+                          icon: const Icon(Icons.medical_services,
+                              color: Colors.white),
+                          label: const Text('SAMU (192)',
+                              style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _callNumber("193"),
-                      icon: const Icon(Icons.local_fire_department,
-                          color: Colors.white),
-                      label: const Text('Bombeiros (193)',
-                          style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _callNumber("192"),
-                      icon: const Icon(Icons.medical_services,
-                          color: Colors.white),
-                      label: const Text('SAMU (192)',
-                          style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                      ),
-                    ),
-                  ],
-                ),
     );
   }
 }

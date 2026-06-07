@@ -1,13 +1,12 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../models/alert_result.dart';
-import '../models/weather_forecast.dart';
 import '../services/flood_alert_coordinator.dart';
 import '../theme.dart';
 
-// Timeout global para cada etapa — evita loading infinito
 const _kLocationTimeout = Duration(seconds: 45);
 
 class RiskMapScreen extends StatefulWidget {
@@ -25,15 +24,12 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   bool _dataLoading     = false;
 
   String? _locationError;
-  String? _dataError;
+  CoordinatorResult? _result;
 
   LatLng _mapCenter          = const LatLng(-23.5505, -46.6333);
   LatLng? _currentLocation;
 
   String _locationStatus     = 'Determinando localização...';
-  AlertResult? _alertResult;
-  WeatherForecast? _forecast;
-  String _cityName           = '';
 
   @override
   void initState() {
@@ -45,33 +41,29 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
     setState(() {
       _locationLoading = true;
       _locationError   = null;
-      _dataError       = null;
-      _alertResult     = null;
+      _result          = null;
     });
 
     try {
       final result = await _coordinator.run().timeout(_kLocationTimeout);
-      final position = LatLng(result.location.lat, result.location.lng);
+      final position = LatLng(result.lat, result.lng);
 
       if (!mounted) return;
       setState(() {
         _currentLocation = position;
         _mapCenter       = position;
-        _cityName        = result.location.cityName;
-        _locationStatus  = result.location.cityName.isNotEmpty
-            ? '${result.location.cityName} — ${result.location.uf}'
+        _locationStatus  = result.cityName.isNotEmpty
+            ? '${result.cityName} — ${result.uf}'
             : 'Localização encontrada';
         _locationLoading = false;
         _dataLoading     = true;
-
-        _alertResult = result.alert;
-        _forecast    = result.forecast;
+        _result          = result;
       });
 
       try { _mapController.move(_mapCenter, 13); } catch (_) {}
 
-      if (result.alert.shouldAlert && mounted) {
-        _showAlertBanner(result.alert);
+      if (result.shouldAlert && mounted) {
+        _showAlertBanner(result.reason, Color(result.colorValue));
       }
 
       setState(() => _dataLoading = false);
@@ -85,40 +77,41 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
       });
     }
   }
-  // dentro do _RiskMapScreenState
 
-Set<CircleMarker> _buildRiskCircles() {
-  if (_currentLocation == null || _alertResult == null) return {};
+  Set<CircleMarker> _buildRiskCircles() {
+  if (_currentLocation == null || _result == null) return {};
 
-  final color = _alertResult!.color.withOpacity(0.3);
+  final baseColor = Color(_result!.colorValue);
+
+  debugPrint("RiskLevel: ${_result!.riskLevel}, ColorValue: ${_result!.colorValue.toRadixString(16)}");
 
   return {
     CircleMarker(
       point: _currentLocation!,
-      radius: 5000, // 5 km
+      radius: 5000,
       useRadiusInMeter: true,
-      color: color,
+      color: baseColor.withOpacity(0.4),
       borderStrokeWidth: 2,
-      borderColor: _alertResult!.color.withOpacity(0.8),
+      borderColor: baseColor,
     ),
     CircleMarker(
       point: _currentLocation!,
-      radius: 10000, // 10 km
+      radius: 10000,
       useRadiusInMeter: true,
-      color: color.withOpacity(0.2),
+      color: baseColor.withOpacity(0.2),
       borderStrokeWidth: 2,
-      borderColor: _alertResult!.color.withOpacity(0.6),
+      borderColor: baseColor.withOpacity(0.6),
     ),
   };
 }
 
 
-  void _showAlertBanner(AlertResult alert) {
+  void _showAlertBanner(String reason, Color color) {
     ScaffoldMessenger.of(context).showMaterialBanner(
       MaterialBanner(
-        backgroundColor: alert.color,
+        backgroundColor: color,
         content: Text(
-          alert.reason,
+          reason,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         actions: [
@@ -162,7 +155,7 @@ Set<CircleMarker> _buildRiskCircles() {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Mapa de Risco', style: AppTextStyles.headlineMd),
+                      const Text('Mapa de Risco', style: AppTextStyles.headlineMd),
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: _locationLoading ? null : _loadInPhases,
@@ -180,36 +173,35 @@ Set<CircleMarker> _buildRiskCircles() {
                       child: Stack(
                         children: [
                           FlutterMap(
-  mapController: _mapController,
-  options: MapOptions(
-    initialCenter: _mapCenter,
-    initialZoom: 12,
-  ),
-  children: [
-    TileLayer(
-      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      userAgentPackageName: 'com.floodguard.app',
-    ),
-    if (_currentLocation != null)
-      MarkerLayer(
-        markers: [
-          Marker(
-            width: 32,
-            height: 32,
-            point: _currentLocation!,
-            child: const Icon(
-              Icons.my_location,
-              color: Colors.blue,
-              size: 28,
-            ),
-          ),
-        ],
-      ),
-    if (_alertResult != null)
-      CircleLayer(circles: _buildRiskCircles().toList()),
-  ],
-),
-
+                            mapController: _mapController,
+                            options: MapOptions(
+                              initialCenter: _mapCenter,
+                              initialZoom: 12,
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                userAgentPackageName: 'com.floodguard.app',
+                              ),
+                              if (_currentLocation != null)
+                                MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      width: 32,
+                                      height: 32,
+                                      point: _currentLocation!,
+                                      child: const Icon(
+                                        Icons.my_location,
+                                        color: Colors.blue,
+                                        size: 28,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              if (_result != null)
+                                CircleLayer(circles: _buildRiskCircles().toList()),
+                            ],
+                          ),
                           if (_locationLoading)
                             Container(
                               color: Colors.black.withOpacity(0.35),
@@ -246,11 +238,10 @@ Set<CircleMarker> _buildRiskCircles() {
               left: 0,
               right: 0,
               bottom: 0,
-              child: StatusBottomSheet( // corrigido: classe definida abaixo
+              child: StatusBottomSheet(
                 locationStatus: _locationStatus,
                 locationError: _locationError,
-                alertResult: _alertResult,
-                forecast: _forecast,
+                result: _result,
                 dataLoading: _dataLoading,
                 onRetry: _loadInPhases,
               ),
@@ -287,17 +278,17 @@ class _LegendCard extends StatelessWidget {
           Text('Legenda',
               style: AppTextStyles.headlineMd.copyWith(fontSize: 15)),
           const SizedBox(height: 10),
-          _LegendRow(color: const Color(0xFFF44336), label: 'Muito Alto'),
+          const _LegendRow(color: Color(0xFFF44336), label: 'Muito Alto'),
           const SizedBox(height: 5),
-          _LegendRow(color: const Color(0xFFFF9800), label: 'Alto'),
+          const _LegendRow(color: Color(0xFFFF9800), label: 'Alto'),
           const SizedBox(height: 5),
-          _LegendRow(color: const Color(0xFFFFEB3B), label: 'Moderado'),
+          const _LegendRow(color: Color(0xFFFFEB3B), label: 'Moderado'),
           const SizedBox(height: 5),
-          _LegendRow(color: const Color(0xFF4CAF50), label: 'Baixo'),
+          const _LegendRow(color: Color(0xFF4CAF50), label: 'Baixo'),
           const SizedBox(height: 10),
-          Row(children: [
-            const Icon(Icons.my_location, size: 13, color: Colors.blue),
-            const SizedBox(width: 5),
+          const Row(children: [
+            Icon(Icons.my_location, size: 13, color: Colors.blue),
+            SizedBox(width: 5),
             Text('Você', style: AppTextStyles.labelSm),
           ]),
         ],
@@ -329,8 +320,7 @@ class _LegendRow extends StatelessWidget {
 class StatusBottomSheet extends StatelessWidget {
   final String locationStatus;
   final String? locationError;
-  final AlertResult? alertResult;
-  final WeatherForecast? forecast;
+  final CoordinatorResult? result;
   final bool dataLoading;
   final VoidCallback onRetry;
 
@@ -338,8 +328,7 @@ class StatusBottomSheet extends StatelessWidget {
     required this.locationStatus,
     required this.onRetry,
     this.locationError,
-    this.alertResult,
-    this.forecast,
+    this.result,
     this.dataLoading = false,
   });
 
@@ -368,7 +357,7 @@ class StatusBottomSheet extends StatelessWidget {
               ),
             ),
           ),
-          Text('Risco de Alagamento', style: AppTextStyles.headlineMd),
+          const Text('Risco de Alagamento', style: AppTextStyles.headlineMd),
           const SizedBox(height: 4),
 
           // Status da localização
@@ -393,52 +382,51 @@ class StatusBottomSheet extends StatelessWidget {
 
           if (dataLoading)
             const LinearProgressIndicator()
-          else if (alertResult != null) ...[
+          else if (result != null) ...[
             // Card de alerta
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: alertResult!.color.withOpacity(0.1),
+                color: Color(result!.colorValue).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: alertResult!.color.withOpacity(0.3)),
+                border: Border.all(color: Color(result!.colorValue).withOpacity(0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
                     Icon(
-                      alertResult!.shouldAlert
+                      result!.shouldAlert
                           ? Icons.warning_rounded
                           : Icons.check_circle,
-                      color: alertResult!.color,
+                      color: Color(result!.colorValue),
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      alertResult!.displayTitle,
+                      result!.severityTitle.isNotEmpty
+                          ? result!.severityTitle
+                          : "Nenhum risco mapeado",
                       style: AppTextStyles.headlineMd.copyWith(fontSize: 17),
                     ),
                   ]),
                   const SizedBox(height: 6),
-                  Text(alertResult!.reason, style: AppTextStyles.bodyMd),
+                  Text(result!.reason, style: AppTextStyles.bodyMd),
                 ],
               ),
             ),
 
             // Linha de previsão de chuva
-            if (forecast != null) ...[
-              const SizedBox(height: 10),
-              Row(children: [
-                const Icon(Icons.water_drop_outlined,
-                    size: 15, color: Colors.blue),
-                const SizedBox(width: 6),
-                Text(
-                  '${forecast!.accumulatedMm24h.toStringAsFixed(1)}mm previstos/24h'
-                  ' · ${forecast!.source}',
-                  style: AppTextStyles.bodyMd,
-                ),
-              ]),
-            ],
+            const SizedBox(height: 10),
+            Row(children: [
+              const Icon(Icons.water_drop_outlined,
+                  size: 15, color: Colors.blue),
+              const SizedBox(width: 6),
+              Text(
+                '${result!.rainfallMm.toStringAsFixed(1)}mm previstos/24h · ${result!.weatherSource}',
+                style: AppTextStyles.bodyMd,
+              ),
+            ]),
           ] else if (locationError != null) ...[
             // Estado de erro com botão de retry
             Container(

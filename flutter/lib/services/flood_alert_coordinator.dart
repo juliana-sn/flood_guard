@@ -1,173 +1,149 @@
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
-
-import '../models/alert_result.dart';
-import '../models/flood_risk.dart';
-import '../models/location_info.dart';
-import '../models/weather_forecast.dart';
-import 'cache_service.dart';
-import 'ibge_service.dart';
-import 'weather_service.dart';
-import 'geo_risk_service.dart' hide RiskLevel;
+import 'api_client.dart';
 
 class CoordinatorResult {
-  final LocationInfo location;
-  final WeatherForecast forecast;
-  final FloodRisk risk;
-  final AlertResult alert;
+  final double lat;
+  final double lng;
+  final String cityName;
+  final String uf;
+  final String riskLevel;
+  final String severityTitle;
+  final String riskMessage;
+  final String reason;
+  final double rainfallMm;
+  final String weatherSource;
+  final bool shouldAlert;
+  final int colorValue;
 
-  const CoordinatorResult({
-    required this.location,
-    required this.forecast,
-    required this.risk,
-    required this.alert,
+  CoordinatorResult({
+    required this.lat,
+    required this.lng,
+    required this.cityName,
+    required this.uf,
+    required this.riskLevel,
+    required this.severityTitle,
+    required this.riskMessage,
+    required this.reason,
+    required this.rainfallMm,
+    required this.weatherSource,
+    required this.shouldAlert,
+    required this.colorValue,
   });
+
+  CoordinatorResult copyWith({
+    String? reason,
+  }) {
+    return CoordinatorResult(
+      lat: lat,
+      lng: lng,
+      cityName: cityName,
+      uf: uf,
+      riskLevel: riskLevel,
+      severityTitle: severityTitle,
+      riskMessage: riskMessage,
+      reason: reason ?? this.reason,
+      rainfallMm: rainfallMm,
+      weatherSource: weatherSource,
+      shouldAlert: shouldAlert,
+      colorValue: colorValue,
+    );
+  }
+}
+
+CoordinatorResult buildResult({
+  required double lat,
+  required double lng,
+  required String cityName,
+  required String uf,
+  required String riskLevel,
+  required double rainfallMm,
+  required String weatherSource,
+}) {
+  late int colorValue;
+  late String severityTitle;
+  late String riskMessage;
+  late bool shouldAlert;
+
+  switch (riskLevel) {
+  case "very_high":
+    colorValue = 0xFFF44336; // Vermelho
+    severityTitle = "Risco Muito Alto";
+    riskMessage = "Alerta máximo de alagamento";
+    shouldAlert = true;
+    break;
+  case "high":
+    colorValue = 0xFFFF9800; // Laranja
+    severityTitle = "Risco Alto";
+    riskMessage = "Probabilidade elevada de alagamento";
+    shouldAlert = true;
+    break;
+  case "moderate":
+    colorValue = 0xFFFFEB3B; // Amarelo
+    severityTitle = "Risco Moderado";
+    riskMessage = "Possibilidade moderada de alagamento";
+    shouldAlert = true;
+    break;
+  case "low":
+  case "none": // 👈 trata 'none' como 'low'
+    colorValue = 0xFF4CAF50; // Verde
+    severityTitle = "Risco Baixo";
+    riskMessage = "Baixa probabilidade de alagamento";
+    shouldAlert = false;
+    break;
+  default:
+    colorValue = 0xFF9E9E9E; // fallback cinza
+    severityTitle = "Nenhum risco";
+    riskMessage = "Nenhum risco mapeado";
+    shouldAlert = false;
+  }
+
+
+  return CoordinatorResult(
+    lat: lat,
+    lng: lng,
+    cityName: cityName,
+    uf: uf,
+    riskLevel: riskLevel,
+    severityTitle: severityTitle,
+    riskMessage: riskMessage,
+    reason: "Análise meteorológica e hidrológica",
+    rainfallMm: rainfallMm,
+    weatherSource: weatherSource,
+    shouldAlert: shouldAlert,
+    colorValue: colorValue,
+  );
 }
 
 class FloodAlertCoordinator {
-  final _ibge    = IbgeService();
-  final _weather = WeatherService();
-  final _geoRisk = GeoRiskService();
-
-  CacheService? _cache;
-
-  Future<CacheService> get _cacheService async {
-    _cache ??= await CacheService.create();
-    return _cache!;
-  }
-
   Future<CoordinatorResult> run() async {
-    final pos = await _getPosition();
-    debugPrint('[Coordinator] GPS ok: ${pos.latitude}, ${pos.longitude}');
+    // Obter localização atual via GPS
+    final position = await Geolocator.getCurrentPosition();
+    final lat = position.latitude;
+    final lng = position.longitude;
 
-    final location = await _resolveLocation(pos);
-    debugPrint('[Coordinator] Município: ${location.cityName} / ${location.uf} / IBGE: ${location.ibgeCode} / CPTEC: ${location.cptecCityId}');
+    // Buscar dados reais da API
+    final data = await ApiClient.getRisk(lat, lng);
 
-    final results = await Future.wait([
-      _getForecast(location),
-      _getRisk(location),
-    ]);
+    // Extrair campos da resposta
+    final cityName = data["cityName"] ?? "";
+    final uf = data["uf"] ?? "";
+    final riskLevel = data["riskLevel"] ?? "none";
+    final rainfallMm = (data["rainfallMm"] as num?)?.toDouble() ?? 0.0;
+    final weatherSource = data["weatherSource"] ?? "";
+    final reason = data["reason"] ?? "Análise meteorológica e hidrológica";
 
-    final forecast = results[0] as WeatherForecast;
-    final risk     = results[1] as FloodRisk;
-
-    debugPrint('[Coordinator] Forecast: ${forecast.accumulatedMm24h}mm / source: ${forecast.source}');
-    debugPrint('[Coordinator] Risk: ${risk.level} / ${risk.message}');
-
-    final alert = AlertEngine.evaluate(
-      zoneRisk: risk,
-      forecastRainfallMm: forecast.accumulatedMm24h,
+    // Montar resultado com buildResult
+    final result = buildResult(
+      lat: lat,
+      lng: lng,
+      cityName: cityName,
+      uf: uf,
+      riskLevel: riskLevel,
+      rainfallMm: rainfallMm,
+      weatherSource: weatherSource,
     );
 
-    return CoordinatorResult(
-      location: location,
-      forecast: forecast,
-      risk: risk,
-      alert: alert,
-    );
-  }
-
-  Future<Position> _getPosition() async {
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.deniedForever) {
-      throw Exception('Permissão de localização permanentemente negada.');
-    }
-    return Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-  }
-
-  Future<LocationInfo> _resolveLocation(Position pos) async {
-    final cache = await _cacheService;
-    final cached = cache.loadLocation();
-    if (cached != null) {
-      final loc = LocationInfo.fromJson(cached);
-      final dist = Geolocator.distanceBetween(
-          loc.lat, loc.lng, pos.latitude, pos.longitude);
-      if (dist < 500) {
-        debugPrint('[Coordinator] Localização do cache (dist: ${dist.toStringAsFixed(0)}m)');
-        return loc;
-      }
-    }
-
-    try {
-      final loc = await _ibge.resolveLocation(pos.latitude, pos.longitude);
-      await cache.saveLocation(loc.toJson());
-      return loc;
-    } catch (e) {
-      debugPrint('[Coordinator] IBGE falhou: $e — usando coordenadas brutas');
-      return LocationInfo(
-        cityName: '',
-        uf: '',
-        stateName: '',
-        ibgeCode: '',
-        cptecCityId: null,
-        lat: pos.latitude,
-        lng: pos.longitude,
-      );
-    }
-  }
-
-  Future<WeatherForecast> _getForecast(LocationInfo loc) async {
-    try {
-      final forecast = await _weather.fetchForecastByCoords(loc.lat, loc.lng);
-      return forecast;
-    } catch (e) {
-      debugPrint('[Coordinator] Forecast falhou: $e');
-      return WeatherForecast.empty();
-    }
-  }
-
-  Future<FloodRisk> _getRisk(LocationInfo loc) async {
-    try {
-      // Agora passamos UF e nome do estado
-      final riskLevel = await _geoRisk.fetchFloodRiskByState(loc.uf, loc.stateName);
-      return FloodRisk.fromLevel(riskLevel.index);
-    } catch (e) {
-      debugPrint('[Coordinator] Risk falhou: $e');
-      return FloodRisk.none();
-    }
-  }
-
-  Future<CoordinatorResult> simulate() async {
-    final location = LocationInfo(
-      cityName: 'São Paulo',
-      uf: 'SP',
-      stateName: 'São Paulo',
-      ibgeCode: '3550308',
-      cptecCityId: null,
-      lat: -23.5738,
-      lng: -46.6231,
-    );
-
-    final forecast = WeatherForecast(
-      accumulatedMm24h: 60.0, // simula 60mm de chuva
-      maxIntensityMm3h: 25.0,
-      intensity: RainIntensity.extreme,
-      source: 'Simulado',
-      description: 'Chuvas fortes ao longo do dia',
-    );
-
-    final risk = FloodRisk.fromLevel(RiskLevel.high.index);
-
-    final alert = AlertEngine.evaluate(
-      zoneRisk: risk,
-      forecastRainfallMm: forecast.accumulatedMm24h,
-    );
-
-    return CoordinatorResult(
-      location: location,
-      forecast: forecast,
-      risk: risk,
-      alert: alert,
-    );
-  }
-
-  Future<void> clearCache() async {
-    final cache = await _cacheService;
-    await cache.clearAll();
+    // Sobrescrever reason se vier da API
+    return result.copyWith(reason: reason);
   }
 }

@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.schemas import AlertStatus, EmergencyAction
+from app.models.schemas import AlertStatus, EmergencyAction
 
 router = APIRouter()
 

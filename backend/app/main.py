@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import router
+
+from app.routes import router as core_router
+from app.routers import auth, addresses, history, risk
 
 app = FastAPI(
     title="Flood Guard API",
-    description="API de monitoramento hidrológico para o Flood Guard.",
+    description="API de monitoramento de risco para o Flood Guard.",
     version="0.1.0",
 )
 
@@ -16,7 +18,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router, prefix="/api")
+# Incluindo todos os routers
+app.include_router(core_router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
+app.include_router(addresses.router, prefix="/api")
+app.include_router(history.router, prefix="/api")
+app.include_router(risk.router, prefix="/api")
 
 @app.get("/health")
 def health_check():

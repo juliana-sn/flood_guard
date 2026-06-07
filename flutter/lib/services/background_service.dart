@@ -1,5 +1,4 @@
 import 'package:workmanager/workmanager.dart';
-
 import 'flood_alert_coordinator.dart';
 import 'notification_service.dart';
 
@@ -16,12 +15,10 @@ void callbackDispatcher() {
         final result = await coordinator.run().timeout(
           const Duration(seconds: 30),
         );
-        if (result.alert.shouldAlert) {
+
+        if (result.shouldAlert) {
           await NotificationService.initialize();
-          await NotificationService.sendAlert(
-            result.alert,
-            result.location.cityName,
-          );
+          await NotificationService.sendCoordinatorResult(result);
         }
       } catch (_) {
         // Falha silenciosa — não cancela o ciclo de tasks
