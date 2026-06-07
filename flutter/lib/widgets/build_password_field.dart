@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
-class BuildPasswordField extends StatelessWidget {
+class BuildPasswordField extends StatefulWidget {
   final String label;
   final IconData icon;
   final String hint;
   final bool isVisible;
   final VoidCallback onToggleVisibility;
+  final ValueChanged<String>? onChanged;
 
   const BuildPasswordField({
     super.key,
@@ -15,7 +16,27 @@ class BuildPasswordField extends StatelessWidget {
     required this.hint,
     required this.isVisible,
     required this.onToggleVisibility,
+    this.onChanged,
   });
+
+  @override
+  State<BuildPasswordField> createState() => _BuildPasswordFieldState();
+}
+
+class _BuildPasswordFieldState extends State<BuildPasswordField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +46,7 @@ class BuildPasswordField extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 8, bottom: 8),
           child: Text(
-            label,
+            widget.label,
             style: AppTextStyles.labelLg.copyWith(
               color: AppColors.onSurface,
             ),
@@ -37,20 +58,22 @@ class BuildPasswordField extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: TextField(
-            obscureText: !isVisible,
+            controller: _controller,
+            obscureText: !widget.isVisible,
+            onChanged: widget.onChanged,
             decoration: InputDecoration(
-              hintText: hint,
+              hintText: widget.hint,
               hintStyle: TextStyle(
                 color: AppColors.onSurfaceVariant.withOpacity(0.5),
               ),
               prefixIcon: Icon(
-                icon,
+                widget.icon,
                 color: AppColors.onSurfaceVariant,
               ),
               suffixIcon: IconButton(
-                onPressed: onToggleVisibility,
+                onPressed: widget.onToggleVisibility,
                 icon: Icon(
-                  isVisible ? Icons.visibility_off : Icons.visibility,
+                  widget.isVisible ? Icons.visibility_off : Icons.visibility,
                   color: AppColors.onSurfaceVariant,
                 ),
               ),

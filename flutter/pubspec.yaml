@@ -1,37 +1,65 @@
-name: lumen_orbit
-description: Aplicativo Flutter para monitoramento hidrológico OrbitFlood.
-publish_to: none
-version: 0.1.0+1
+name: flood_guard
+description: Aplicativo de alerta de risco de enchentes
+publish_to: 'none'
+version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.5
-  provider: ^6.1.5+1
-  geolocator: ^14.0.2
-  flutter_config: ^2.0.2
-  google_maps_flutter: ^2.17.1
-  flutter_map: ^7.0.2 
-  latlong2: ^0.9.1
-  http: ^1.6.0
-  
+
+  # Mapa
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+
+  # Localização
+  geolocator: ^12.0.0
+
+  # HTTP
+  http: ^1.2.0
+
+  # Parse de XML (CPTEC)
+  xml: ^6.5.0
+
+  # Cache local
+  shared_preferences: ^2.2.0
+
+  # Notificações
+  flutter_local_notifications: ^17.0.0
+
+  # Background tasks (substitui flutter_background_fetch)
+  workmanager: ^0.5.2
+
+  cupertino_icons: ^1.0.6
+  html: ^0.15.6
+  diacritic: ^0.1.6
+
+  flutter_dotenv: ^5.1.0
+  url_launcher: ^6.3.2
+
   
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+  
 
 flutter:
   uses-material-design: true
-  fonts:
-    - family: Plus Jakarta Sans
-      fonts:
-        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
-        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
-          weight: 700
+  assets:
+    - .env
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  remove_alpha_ios: true
+
+
+
