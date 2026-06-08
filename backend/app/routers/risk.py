@@ -29,7 +29,7 @@ async def get_risk(
     location, weather = await asyncio.gather(location_task, weather_task)
 
     # Busca risco pelo estado
-    risk_level = await fetch_risk_by_state(location["state_name"])
+    risk_level = await fetch_risk_by_state(location["state_name"], location["uf"])
 
     # Motor de alerta
     alert = evaluate(risk_level, weather["rainfall_mm"])

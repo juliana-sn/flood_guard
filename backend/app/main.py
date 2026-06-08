@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import router as core_router
-from app.routers import auth, addresses, history, risk
+from app.routers import auth, history, risk
 
 app = FastAPI(
     title="Flood Guard API",
@@ -21,7 +21,6 @@ app.add_middleware(
 # Incluindo todos os routers
 app.include_router(core_router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
-app.include_router(addresses.router, prefix="/api")
 app.include_router(history.router, prefix="/api")
 app.include_router(risk.router, prefix="/api")
 

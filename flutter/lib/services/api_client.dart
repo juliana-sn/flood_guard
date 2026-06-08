@@ -118,34 +118,6 @@ class ApiClient {
     return _decode(r);
   }
 
-  // ── Addresses ──────────────────────────────────────────────────────────────
-
-  static Future<List<dynamic>> getAddresses() async {
-    final r = await http
-        .get(Uri.parse('$_baseUrl/addresses'),
-            headers: await _headers(auth: true))
-        .timeout(const Duration(seconds: 15));
-    return _decodeList(r);
-  }
-
-  static Future<Map<String, dynamic>> addAddress(Map<String, dynamic> body) async {
-    final r = await http
-        .post(
-          Uri.parse('$_baseUrl/addresses'),
-          headers: await _headers(auth: true),
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 15));
-    return _decode(r);
-  }
-
-  static Future<void> deleteAddress(int id) async {
-    await http
-        .delete(Uri.parse('$_baseUrl/addresses/$id'),
-            headers: await _headers(auth: true))
-        .timeout(const Duration(seconds: 15));
-  }
-
   // ── Alert History ──────────────────────────────────────────────────────────
 
   static Future<List<dynamic>> getHistory({int limit = 50}) async {

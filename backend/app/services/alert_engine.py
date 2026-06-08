@@ -50,17 +50,24 @@ def evaluate(risk_level: str, rainfall_mm: float) -> dict:
             "color_hex": SEVERITY_COLORS["info"],
         }
 
-    threshold = RISK_THRESHOLDS.get(risk_level, 999)
-    should_alert = rainfall_mm >= threshold
+    severity_map = {
+        "low": "watch",
+        "moderate": "warning",
+        "high": "danger",
+        "veryHigh": "emergency",
+    }
+    severity = severity_map.get(risk_level, "info")
 
-    severity = _severity_for(risk_level, should_alert)
+    should_alert = True 
 
-    reason = (
-        f"{rainfall_mm:.1f}mm previstos em área de risco {_label(risk_level)}."
-        if should_alert
-        else f"Chuva prevista ({rainfall_mm:.1f}mm) abaixo do limiar para esta área."
-    )
+    risk_level_pt = {
+        "low": "baixo",
+        "moderate": "moderado",
+        "high": "alto",
+        "veryHigh": "muito alto",
+    }
 
+    reason = f"Risco estadual {risk_level_pt.get(risk_level, risk_level)} segundo boletim do CEMADEN."
     return {
         "severity": severity,
         "severity_title": SEVERITY_TITLES[severity],
@@ -68,6 +75,7 @@ def evaluate(risk_level: str, rainfall_mm: float) -> dict:
         "reason": reason,
         "color_hex": SEVERITY_COLORS[severity],
     }
+
 
 
 def _severity_for(risk: str, alert: bool) -> str:

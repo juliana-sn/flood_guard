@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -26,7 +24,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   String? _locationError;
   CoordinatorResult? _result;
 
-  LatLng _mapCenter          = const LatLng(-23.5505, -46.6333);
+  LatLng? _mapCenter;
   LatLng? _currentLocation;
 
   String _locationStatus     = 'Determinando localização...';
@@ -60,7 +58,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
         _result          = result;
       });
 
-      try { _mapController.move(_mapCenter, 13); } catch (_) {}
+      try { _mapController.move(_mapCenter!, 13); } catch (_) {}
 
       if (result.shouldAlert && mounted) {
         _showAlertBanner(result.reason, Color(result.colorValue));
@@ -69,13 +67,15 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
       setState(() => _dataLoading = false);
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _locationError   = _friendlyError(e);
-        _locationStatus  = 'Usando localização padrão (São Paulo)';
-        _locationLoading = false;
-        _dataLoading     = false;
-      });
-    }
+        setState(() {
+          _locationError   = _friendlyError(e);
+          _locationStatus  = 'Erro ao obter localização';
+          _locationLoading = false;
+          _dataLoading     = false;
+          _result          = null;
+          _currentLocation = null;
+        });
+      }
   }
 
   Set<CircleMarker> _buildRiskCircles() {
@@ -175,7 +175,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                           FlutterMap(
                             mapController: _mapController,
                             options: MapOptions(
-                              initialCenter: _mapCenter,
+                              initialCenter: _mapCenter ?? const LatLng(0, 0),
                               initialZoom: 12,
                             ),
                             children: [

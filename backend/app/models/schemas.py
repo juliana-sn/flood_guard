@@ -31,30 +31,6 @@ class LoginIn(BaseModel):
     password: str
 
 
-# ── Saved Addresses ───────────────────────────────────────────────────────────
-
-class AddressCreate(BaseModel):
-    label: str = Field(min_length=1, max_length=80)
-    city_name: str
-    uf: str = Field(min_length=2, max_length=2)
-    ibge_code: str
-    lat: float
-    lng: float
-
-
-class AddressOut(BaseModel):
-    id: int
-    label: str
-    city_name: str
-    uf: str
-    ibge_code: str
-    lat: float
-    lng: float
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
 # ── Alert History ─────────────────────────────────────────────────────────────
 
 class AlertHistoryOut(BaseModel):
