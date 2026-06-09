@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/flood_alert_coordinator.dart';
+import '../theme.dart';
 
 class AlertCenterScreen extends StatefulWidget {
   const AlertCenterScreen({super.key});
@@ -9,29 +10,64 @@ class AlertCenterScreen extends StatefulWidget {
   State<AlertCenterScreen> createState() => _AlertCenterScreenState();
 }
 
-class _AlertCenterScreenState extends State<AlertCenterScreen> {
+class _AlertCenterScreenState extends State<AlertCenterScreen>
+    with AutomaticKeepAliveClientMixin {
+
+  // AutomaticKeepAliveClientMixin preserva o estado quando o usuário
+  // muda de aba — evita reload desnecessário ao voltar para esta tela
+  @override
+  bool get wantKeepAlive => true;
+
   final _coordinator = FloodAlertCoordinator();
   CoordinatorResult? _result;
   bool _loading = false;
+  bool _loaded = false; // flag: já carregou ao menos uma vez
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    // NÃO carrega no initState — o IndexedStack inicializa todas as telas
+    // ao mesmo tempo, então carregar aqui causaria duas chamadas paralelas
+    // ao backend (mapa + central de alertas) sem que o cache do mapa
+    // pudesse ser aproveitado.
+    // O carregamento acontece no didChangeDependencies apenas na primeira
+    // vez que o widget é exibido na árvore.
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Carrega apenas uma vez, na primeira vez que a tela fica visível.
+    // Nas vezes seguintes, AutomaticKeepAliveClientMixin mantém o estado.
+    if (!_loaded) {
+      _loaded = true;
+      // Pequeno delay para garantir que o RiskMapScreen já disparou run()
+      // e populou o cache antes desta tela tentar ler.
+      Future.delayed(const Duration(milliseconds: 500), _load);
+    }
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
     setState(() { _loading = true; _error = null; });
     try {
-      // Usa cache se disponível — evita refazer GPS + APIs
       final result = await _coordinator.run(forceRefresh: forceRefresh);
       if (!mounted) return;
       setState(() { _result = result; _loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = 'Erro ao carregar alertas: $e'; _loading = false; });
+      setState(() {
+        _error = _friendlyError(e);
+        _loading = false;
+      });
     }
+  }
+
+  String _friendlyError(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('timeout')) return 'Tempo esgotado. Verifique sua conexão.';
+    if (msg.contains('permission')) return 'Permissão de localização negada.';
+    return 'Erro ao carregar dados. Tente novamente.';
   }
 
   Future<void> _callNumber(String number) async {
@@ -41,11 +77,12 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // obrigatório com AutomaticKeepAliveClientMixin
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Centro de Alertas'),
         actions: [
-          // Botão de refresh forçado (ignora cache)
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Atualizar dados',
@@ -56,42 +93,49 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                      const SizedBox(height: 12),
-                      Text(_error!, style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () => _load(forceRefresh: true),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Tentar novamente'),
-                      ),
-                    ],
-                  ),
-                )
+              ? _buildError()
               : _result == null
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.info_outline, color: Colors.grey, size: 48),
-                          const SizedBox(height: 12),
-                          const Text('Nenhum dado carregado'),
-                          const SizedBox(height: 12),
-                          ElevatedButton.icon(
-                            onPressed: () => _load(forceRefresh: true),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Atualizar'),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? _buildEmpty()
                   : _buildContent(),
     );
   }
+
+  Widget _buildError() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 12),
+          Text(_error!, textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _load(forceRefresh: true),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Tentar novamente'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildEmpty() => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.info_outline, color: Colors.grey, size: 48),
+        const SizedBox(height: 12),
+        const Text('Nenhum dado carregado'),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () => _load(forceRefresh: true),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Atualizar'),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildContent() {
     final r = _result!;
@@ -102,12 +146,12 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
       children: [
         // Município
         Text(
-          '${r.cityName} / ${r.uf}',
+          r.cityName.isNotEmpty ? '${r.cityName} / ${r.uf}' : 'Localização detectada',
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
 
-        // Card de alerta principal — cor vinda da API
+        // Card principal de alerta
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -124,12 +168,14 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
                   color: color,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  r.severityTitle.isNotEmpty ? r.severityTitle : 'Nenhum risco',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(color: color),
+                Expanded(
+                  child: Text(
+                    r.severityTitle.isNotEmpty ? r.severityTitle : 'Sem risco mapeado',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(color: color),
+                  ),
                 ),
               ]),
               const SizedBox(height: 8),
@@ -139,33 +185,39 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Previsão de chuva
-        Text(
-          'Previsão: ${r.rainfallMm.toStringAsFixed(1)}mm/24h (${r.weatherSource})',
-        ),
+        // Previsão e risco
+        Row(children: [
+          const Icon(Icons.water_drop_outlined, size: 16, color: Colors.blue),
+          const SizedBox(width: 6),
+          Text('${r.rainfallMm.toStringAsFixed(1)}mm/24h · ${r.weatherSource}'),
+        ]),
         const SizedBox(height: 6),
+        Row(children: [
+          Icon(Icons.terrain, size: 16, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              r.riskMessage.isNotEmpty ? r.riskMessage : 'Sem dados de risco',
+              style: TextStyle(color: color),
+            ),
+          ),
+        ]),
 
-        // Nível de risco
-        Text(
-          'Risco: ${r.riskMessage.isNotEmpty ? r.riskMessage : "Nenhum risco mapeado"}',
-          style: TextStyle(color: color),
-        ),
         const SizedBox(height: 24),
 
-        // Aviso de emergência
+        // Aviso
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.red.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
-          child: Row(children: [
-            const Icon(Icons.warning, color: Colors.red),
-            const SizedBox(width: 8),
+          child: const Row(children: [
+            Icon(Icons.warning_amber, color: Colors.red),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Use os números abaixo apenas em situações de emergência.',
-                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
           ]),
@@ -175,6 +227,7 @@ class _AlertCenterScreenState extends State<AlertCenterScreen> {
         Text('Contatos de Emergência',
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
+
         ElevatedButton.icon(
           onPressed: () => _callNumber('199'),
           icon: const Icon(Icons.phone, color: Colors.white),
