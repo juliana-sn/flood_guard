@@ -31,7 +31,7 @@ SEVERITY_TITLES = {
 }
 
 SEVERITY_COLORS = {
-    "info":      "#9E9E9E",
+    "info":      "#4CAF50",
     "safe":      "#4CAF50",
     "watch":     "#FFEB3B",
     "warning":   "#FF9800",
